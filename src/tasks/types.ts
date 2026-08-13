@@ -3,12 +3,26 @@ export type TaskStatus =
   | "received"
   | "awaiting_confirmation"
   | "approved"
+  | "queued"
   | "running"
   | "succeeded"
   | "failed"
   | "timed_out"
   | "cancelled"
-  | "rejected";
+  | "rejected"
+  | "interrupted";
+
+export interface ConversationRecord {
+  senderId: string;
+  currentTaskId?: string;
+  defaultTargetProject?: string;
+  defaultTargetProjectPath?: string;
+  adapterId?: string;
+  agentSessionId?: string;
+  agentSessionDate?: string;
+  agentTurnCount?: number;
+  updatedAt: string;
+}
 
 export interface TaskRecord {
   id: string;
@@ -18,6 +32,9 @@ export interface TaskRecord {
   mode: TaskMode;
   instruction: string;
   actionSummary: string;
+  parentTaskId?: string;
+  resumeSessionId?: string;
+  handoffSummary?: string;
   status: TaskStatus;
   confirmation?: {
     codeHash: string;
@@ -38,4 +55,5 @@ export interface TaskRecord {
 export interface TaskState {
   nextId: number;
   tasks: Record<string, TaskRecord>;
+  conversations: Record<string, ConversationRecord>;
 }

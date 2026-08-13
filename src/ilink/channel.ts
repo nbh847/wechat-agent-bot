@@ -14,6 +14,7 @@ export interface ChannelCallbacks extends LoginCallbacks {
 export class ILinkTextChannel {
   private controller?: AbortController;
   private credentials?: Credentials;
+  private flushing?: Promise<void>;
 
   constructor(
     private readonly api: ILinkApi,
@@ -138,12 +139,21 @@ export class ILinkTextChannel {
   }
 
   private async flushPendingReplies(signal: AbortSignal): Promise<void> {
-    const state = await this.store.load();
-    for (const reply of Object.values(state.pendingReplies)) {
-      await this.reply(reply.userId, reply.text, signal);
-      await this.store.update((next) => {
-        delete next.pendingReplies[reply.messageId];
-      });
+    if (this.flushing) return this.flushing;
+    const flush = (async () => {
+      const state = await this.store.load();
+      for (const reply of Object.values(state.pendingReplies)) {
+        await this.reply(reply.userId, reply.text, signal);
+        await this.store.update((next) => {
+          delete next.pendingReplies[reply.messageId];
+        });
+      }
+    })();
+    this.flushing = flush;
+    try {
+      await flush;
+    } finally {
+      if (this.flushing === flush) this.flushing = undefined;
     }
   }
 }

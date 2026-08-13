@@ -119,6 +119,34 @@ test("queued execution result is persisted before sending and retried by polling
   assert.deepEqual((await store.load()).pendingReplies, {});
 });
 
+test("concurrent flushes send the same persisted reply only once", async () => {
+  const api = new FakeApi();
+  const { channel, store } = await createChannel(api);
+  await store.update((state) => {
+    state.contextTokens["user-1"] = "context-1";
+  });
+
+  let ready!: () => void;
+  const started = new Promise<void>((resolve) => { ready = resolve; });
+  const running = channel.start({
+    onQrCode: () => undefined,
+    onReady: ready,
+    onText: async () => undefined,
+  });
+  await started;
+  await Promise.all([
+    channel.queueReply("execution:T0001", "user-1", "done"),
+    channel.queueReply("execution:T0001", "user-1", "done"),
+  ]);
+  channel.stop();
+  await running;
+
+  assert.deepEqual(api.sent, [
+    { userId: "user-1", contextToken: "context-1", text: "done" },
+  ]);
+  assert.deepEqual((await store.load()).pendingReplies, {});
+});
+
 test("channel stops polling when token expires", async () => {
   const api = new FakeApi();
   api.updates.push(new ILinkApiError("expired", -14));

@@ -9,7 +9,7 @@
 
 ## 当前阶段
 
-Goal 1、Goal 2 和 Goal 3 已由散帅完成人工验收。当前停在 Goal 4 待开始 Gate；开始 Goal 4 前必须先按推进规则更新 `ROADMAP.md`，不得把核心工作流绑定到 Codex、Claude Code 或其他具体 Agent。
+Goal 1、Goal 2、Goal 3 和 Goal 4 已由散帅完成人工验收。当前停在 Goal 5 待开始 Gate；不得未经计划确认和对应红线授权修改系统常驻配置，不得把核心工作流绑定到 Codex、Claude Code 或其他具体 Agent。
 
 ## 项目边界
 

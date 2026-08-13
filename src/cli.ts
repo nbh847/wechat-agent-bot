@@ -25,12 +25,31 @@ const api = new ILinkApi(new HttpClient());
 const login = new LoginManager(api, store, consoleLogger);
 const channel = new ILinkTextChannel(api, login, store, consoleLogger);
 const taskStore = new TaskStore(taskStatePath);
+const serviceProjectPath = resolve(".");
+const interruptedTasks = await taskStore.recoverInterrupted();
+if (interruptedTasks.length > 0) {
+  console.log(`已将重启前未完成的任务标记为中断：${interruptedTasks.join(", ")}`);
+}
 const agentExecutable = process.env.WECHAT_AGENT_EXECUTABLE;
 const coordinator = agentExecutable
   ? new ExecutionCoordinator(
       taskStore,
       new ProcessAgentRunner(agentExecutable),
       {
+        onStarted: async (task) => {
+          await channel.queueReply(
+            `execution-started:${task.id}`,
+            task.senderId,
+            `${task.id} 已结束排队并开始执行。`,
+          );
+        },
+        onProgress: async (task) => {
+          await channel.queueReply(
+            `execution-progress:${task.id}:${Math.floor(Date.now() / 120_000)}`,
+            task.senderId,
+            `${task.id} 仍在执行；可发送 status ${task.id} 查看状态，或 cancel ${task.id} 取消。`,
+          );
+        },
         onFinished: async (task) => {
           await channel.queueReply(
             `execution:${task.id}`,
@@ -39,6 +58,7 @@ const coordinator = agentExecutable
           );
         },
       },
+      serviceProjectPath,
     )
   : undefined;
 const intake = new TaskIntake(

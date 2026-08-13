@@ -12,6 +12,7 @@ const EMPTY_STATE: ChannelState = {
 
 export class StateStore {
   private state?: ChannelState;
+  private writes: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly path: string,
@@ -31,17 +32,23 @@ export class StateStore {
   }
 
   async update(mutator: (state: ChannelState) => void): Promise<ChannelState> {
-    const next = await this.load();
-    mutator(next);
-    next.processedMessageIds = next.processedMessageIds.slice(-this.maxProcessedIds);
-    await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
-    const temporaryPath = `${this.path}.tmp`;
-    await writeFile(temporaryPath, `${JSON.stringify(next, null, 2)}\n`, {
-      mode: 0o600,
+    let updated: ChannelState | undefined;
+    const write = this.writes.then(async () => {
+      const next = await this.load();
+      mutator(next);
+      next.processedMessageIds = next.processedMessageIds.slice(-this.maxProcessedIds);
+      await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
+      const temporaryPath = `${this.path}.tmp`;
+      await writeFile(temporaryPath, `${JSON.stringify(next, null, 2)}\n`, {
+        mode: 0o600,
+      });
+      await rename(temporaryPath, this.path);
+      this.state = next;
+      updated = structuredClone(next);
     });
-    await rename(temporaryPath, this.path);
-    this.state = next;
-    return structuredClone(next);
+    this.writes = write.catch(() => undefined);
+    await write;
+    return updated!;
   }
 }
 
