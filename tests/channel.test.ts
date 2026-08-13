@@ -101,6 +101,24 @@ test("channel retries a persisted reply without invoking callback again", async 
   assert.deepEqual((await store.load()).pendingReplies, {});
 });
 
+test("queued execution result is persisted before sending and retried by polling", async () => {
+  const api = new FakeApi();
+  const { channel, store } = await createChannel(api);
+  await store.update((state) => {
+    state.contextTokens["user-1"] = "context-1";
+  });
+  api.sendErrors.push(new Error("temporary send failure"));
+  await assert.rejects(channel.queueReply("execution:T0001", "user-1", "done"));
+  assert.equal((await store.load()).pendingReplies["execution:T0001"]?.text, "done");
+
+  api.updates.push(new ILinkApiError("expired", -14));
+  await channel.start({ onQrCode: () => undefined, onText: async () => undefined });
+  assert.deepEqual(api.sent, [
+    { userId: "user-1", contextToken: "context-1", text: "done" },
+  ]);
+  assert.deepEqual((await store.load()).pendingReplies, {});
+});
+
 test("channel stops polling when token expires", async () => {
   const api = new FakeApi();
   api.updates.push(new ILinkApiError("expired", -14));

@@ -13,12 +13,18 @@ const HELP = [
   "reject <task-id> <确认码>",
 ].join("\n");
 
+export interface TaskExecutor {
+  start(task: TaskRecord): boolean;
+  cancel(taskId: string): boolean;
+}
+
 export class TaskIntake {
   constructor(
     private readonly store: TaskStore,
     private readonly workspacePath: string,
     private readonly currentProject: string,
     private readonly authorizedSenderId: () => Promise<string | undefined>,
+    private readonly executor?: TaskExecutor,
   ) {}
 
   async handle(senderId: string, input: string): Promise<string> {
@@ -74,7 +80,12 @@ export class TaskIntake {
       createdAt: now,
       updatedAt: now,
     }));
-    if (!reason) return `已接收 ${task.id}：仅记录任务，Goal 2 不会执行 Agent。`;
+    if (!reason) {
+      const started = this.executor?.start(task) ?? false;
+      return started
+        ? `${task.id} 已接收并开始执行。`
+        : `已接收 ${task.id}：当前没有可用执行端，任务未执行。`;
+    }
     return [
       `${task.id} 等待二次确认：${reason}。`,
       `目标：${task.project}`,
@@ -97,7 +108,11 @@ export class TaskIntake {
     const id = match[1].toUpperCase();
     const task = await this.ownedTask(senderId, id);
     if (!task) return "未找到对应任务。";
-    if (task.status === "cancelled" || task.status === "rejected") return `${id} 已结束，不能取消。`;
+    if (this.executor?.cancel(id)) return `${id} 正在取消。`;
+    if (["cancelled", "rejected", "succeeded", "failed", "timed_out"].includes(task.status)) {
+      return `${id} 已结束，不能取消。`;
+    }
+    if (task.status === "running") return `${id} 无法取消。`;
     await this.store.updateTask(id, (next) => {
       next.status = "cancelled";
       next.confirmation = undefined;
@@ -122,9 +137,12 @@ export class TaskIntake {
       next.status = approve ? "approved" : "rejected";
       next.confirmation = undefined;
     });
-    return approve
-      ? `${id} 已确认授权；Goal 2 仅记录授权，不会执行 Agent。`
-      : `${id} 已拒绝。`;
+    if (!approve) return `${id} 已拒绝。`;
+    const approved = await this.store.get(id);
+    const started = approved ? (this.executor?.start(approved) ?? false) : false;
+    return started
+      ? `${id} 已确认授权并开始执行。`
+      : `${id} 已确认授权；当前没有可用执行端，任务未执行。`;
   }
 
   private async ownedTask(senderId: string, id: string): Promise<TaskRecord | undefined> {

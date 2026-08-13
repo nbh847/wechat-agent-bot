@@ -59,7 +59,7 @@ test("rejects a workspace symlink that resolves outside the workspace", async ()
 test("records a read-only task without executing it", async () => {
   const { intake, statePath, store } = await createIntake();
   const response = await intake.handle("owner", "task other-project read inspect README");
-  assert.match(response, /^已接收 T0001/);
+  assert.equal(response, "已接收 T0001：当前没有可用执行端，任务未执行。");
   const task = await store.get("T0001");
   assert.equal(task?.status, "received");
   assert.equal(task?.mode, "read");
@@ -90,7 +90,10 @@ test("cross-project writes require a task-bound one-time confirmation", async ()
   assert.equal((await store.get("T0001"))?.status, "awaiting_confirmation");
 
   assert.equal(await intake.handle("owner", "confirm T0001 000000"), "T0001 确认码不匹配。");
-  assert.match(await intake.handle("owner", `confirm T0001 ${code}`), /已确认授权/);
+  assert.equal(
+    await intake.handle("owner", `confirm T0001 ${code}`),
+    "T0001 已确认授权；当前没有可用执行端，任务未执行。",
+  );
   assert.equal((await store.get("T0001"))?.status, "approved");
   assert.equal(await intake.handle("owner", `confirm T0001 ${code}`), "T0001 当前不接受确认。");
 });
@@ -135,4 +138,29 @@ test("pending tasks can be rejected or cancelled", async () => {
   await intake.handle("owner", "task other-project read inspect tests");
   assert.equal(await intake.handle("owner", "cancel T0002"), "T0002 已取消。");
   assert.equal((await store.get("T0002"))?.status, "cancelled");
+});
+
+test("cancel delegates to an active executor before changing stored state", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wechat-agent-active-cancel-"));
+  const workspace = join(root, "workspace");
+  await mkdir(join(workspace, "wechat-agent-bot"), { recursive: true });
+  const store = new TaskStore(join(root, "tasks.json"));
+  const cancelled: string[] = [];
+  const intake = new TaskIntake(
+    store,
+    workspace,
+    "wechat-agent-bot",
+    async () => "owner",
+    {
+      start: () => true,
+      cancel: (id) => { cancelled.push(id); return true; },
+    },
+  );
+  assert.equal(
+    await intake.handle("owner", "task wechat-agent-bot read inspect README"),
+    "T0001 已接收并开始执行。",
+  );
+  assert.equal(await intake.handle("owner", "cancel T0001"), "T0001 正在取消。");
+  assert.deepEqual(cancelled, ["T0001"]);
+  assert.equal((await store.get("T0001"))?.status, "received");
 });

@@ -3,6 +3,10 @@ export type TaskStatus =
   | "received"
   | "awaiting_confirmation"
   | "approved"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "timed_out"
   | "cancelled"
   | "rejected";
 
@@ -19,6 +23,13 @@ export interface TaskRecord {
     codeHash: string;
     reason: string;
     createdAt: string;
+  };
+  execution?: {
+    sessionId?: string;
+    startedAt: string;
+    finishedAt?: string;
+    result?: string;
+    error?: string;
   };
   createdAt: string;
   updatedAt: string;

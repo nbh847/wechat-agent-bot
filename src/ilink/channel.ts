@@ -94,6 +94,18 @@ export class ILinkTextChannel {
     );
   }
 
+  async queueReply(
+    replyId: string,
+    userId: string,
+    text: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    await this.store.update((next) => {
+      next.pendingReplies[replyId] = { messageId: replyId, userId, text };
+    });
+    await this.flushPendingReplies(signal ?? new AbortController().signal);
+  }
+
   private async processMessages(
     messages: WireMessage[],
     callbacks: ChannelCallbacks,

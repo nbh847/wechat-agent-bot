@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 import { ILinkApi } from "./ilink/api.js";
+import { ExecutionCoordinator, formatExecutionResult } from "./agent/coordinator.js";
+import { ProcessAgentRunner } from "./agent/process-runner.js";
 import { ILinkTextChannel } from "./ilink/channel.js";
 import { HttpClient } from "./ilink/http-client.js";
 import { consoleLogger } from "./ilink/logger.js";
@@ -23,11 +25,28 @@ const api = new ILinkApi(new HttpClient());
 const login = new LoginManager(api, store, consoleLogger);
 const channel = new ILinkTextChannel(api, login, store, consoleLogger);
 const taskStore = new TaskStore(taskStatePath);
+const agentExecutable = process.env.WECHAT_AGENT_EXECUTABLE;
+const coordinator = agentExecutable
+  ? new ExecutionCoordinator(
+      taskStore,
+      new ProcessAgentRunner(agentExecutable),
+      {
+        onFinished: async (task) => {
+          await channel.queueReply(
+            `execution:${task.id}`,
+            task.senderId,
+            formatExecutionResult(task),
+          );
+        },
+      },
+    )
+  : undefined;
 const intake = new TaskIntake(
   taskStore,
   resolve(".."),
   "wechat-agent-bot",
   async () => (await store.load()).credentials?.userId,
+  coordinator,
 );
 
 const shutdown = () => channel.stop();

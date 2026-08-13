@@ -1,0 +1,28 @@
+import type { TaskMode } from "../tasks/types.js";
+
+export const AGENT_PROTOCOL_VERSION = 1;
+
+export interface AgentRunRequest {
+  version: typeof AGENT_PROTOCOL_VERSION;
+  taskId: string;
+  cwd: string;
+  mode: TaskMode;
+  instruction: string;
+  requiredContextFiles: string[];
+  access: {
+    readPaths: string[];
+    writePaths: string[];
+  };
+}
+
+export interface AgentRunResult {
+  version: typeof AGENT_PROTOCOL_VERSION;
+  status: "succeeded" | "failed";
+  sessionId?: string;
+  summary?: string;
+  error?: string;
+}
+
+export interface AgentRunner {
+  run(request: AgentRunRequest, signal: AbortSignal): Promise<AgentRunResult>;
+}
