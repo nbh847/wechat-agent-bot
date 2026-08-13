@@ -8,9 +8,11 @@ const request: AgentRunRequest = {
   version: 1,
   taskId: "T0001",
   cwd: process.cwd(),
+  controlProject: { name: "wechat-agent-bot", path: process.cwd() },
   targetProject: { name: "wechat-agent-bot", path: process.cwd() },
   mode: "read",
   instruction: "inspect",
+  persistSession: true,
   requiredContextFiles: ["README.md"],
   access: { readPaths: [process.cwd()], writePaths: [] },
 };

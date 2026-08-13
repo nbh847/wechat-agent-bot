@@ -110,12 +110,14 @@ export class ExecutionCoordinator implements TaskExecutor {
       const result = await this.runner.run({
         version: AGENT_PROTOCOL_VERSION,
         taskId: task.id,
-        cwd: this.serviceProjectPath,
+        cwd: task.mode === "write" ? task.projectPath : this.serviceProjectPath,
+        controlProject: { name: "wechat-agent-bot", path: this.serviceProjectPath },
         targetProject: { name: task.project, path: task.projectPath },
         mode: task.mode,
         instruction: task.instruction,
-        sessionId: task.resumeSessionId,
+        sessionId: task.mode === "write" ? undefined : task.resumeSessionId,
         handoffSummary: task.handoffSummary,
+        persistSession: task.mode === "read",
         requiredContextFiles,
         access: {
           readPaths: [this.serviceProjectPath, task.projectPath]
@@ -139,7 +141,9 @@ export class ExecutionCoordinator implements TaskExecutor {
         conversation.defaultTargetProject = task.project;
         conversation.defaultTargetProjectPath = task.projectPath;
         conversation.adapterId = this.adapterId;
-        conversation.agentSessionId = result.sessionId ?? task.resumeSessionId;
+        if (task.mode === "read") {
+          conversation.agentSessionId = result.sessionId ?? task.resumeSessionId;
+        }
         conversation.agentSessionDate = shanghaiDate();
       });
     } catch (error) {

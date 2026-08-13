@@ -69,6 +69,7 @@ test("runs one eligible task with project context and persists success", async (
   assert.equal(result.status, "succeeded");
   assert.equal(result.execution?.result, "done");
   assert.equal(runner.requests[0].cwd, serviceProject);
+  assert.deepEqual(runner.requests[0].controlProject, { name: "wechat-agent-bot", path: serviceProject });
   assert.deepEqual(runner.requests[0].targetProject, { name: "project", path: project });
   assert.deepEqual(runner.requests[0].requiredContextFiles, [
     join(serviceProject, "README.md"), join(serviceProject, "AGENTS.md"),
@@ -78,6 +79,7 @@ test("runs one eligible task with project context and persists success", async (
     readPaths: [serviceProject, project],
     writePaths: [],
   });
+  assert.equal(runner.requests[0].persistSession, true);
   while (finished.length === 0) await new Promise((resolve) => setTimeout(resolve, 1));
   assert.equal(finished.length, 1);
 });
@@ -206,6 +208,25 @@ test("rejects tasks that are not received or approved", async () => {
   const { serviceProject, store, task } = await fixture("write", "awaiting_confirmation");
   const coordinator = new ExecutionCoordinator(store, new FakeRunner(), { onFinished: () => undefined }, serviceProject);
   assert.equal(await coordinator.start(task), "rejected");
+});
+
+test("approved writes run from the target in an isolated non-persistent session", async () => {
+  const { project, serviceProject, store, task } = await fixture("write", "approved");
+  await store.updateConversation("owner", (conversation) => {
+    conversation.currentTaskId = task.id;
+    conversation.agentSessionId = "read-session";
+  });
+  task.resumeSessionId = "read-session";
+  const runner = new FakeRunner();
+  runner.runImpl = async () => ({ version: 1, status: "succeeded", sessionId: "write-session", summary: "written" });
+  const coordinator = new ExecutionCoordinator(store, runner, { onFinished: () => undefined }, serviceProject);
+  assert.equal(await coordinator.start(task), "started");
+  assert.equal((await waitForFinish(store, task.id)).status, "succeeded");
+  assert.equal(runner.requests[0].cwd, project);
+  assert.equal(runner.requests[0].sessionId, undefined);
+  assert.equal(runner.requests[0].persistSession, false);
+  assert.deepEqual(runner.requests[0].access.writePaths, [project]);
+  assert.equal((await store.getConversation("owner"))?.agentSessionId, "read-session");
 });
 
 test("a result delivery failure does not rerun or change the completed task", async () => {

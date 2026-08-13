@@ -9,7 +9,7 @@
 
 ## 当前阶段
 
-Goal 1、Goal 2、Goal 3、Goal 4 和 Goal 5 已由散帅完成人工验收。当前停在 Goal 6 待开始 Gate；不得未经对应红线授权安装或启用系统常驻配置，不得把核心工作流绑定到 Codex、Claude Code 或其他具体 Agent。
+Goal 1 至 Goal 6 均已由散帅完成人工验收，MVP 已完成；不得未经对应红线授权安装或启用系统常驻配置，不得把核心工作流绑定到 Codex、Claude Code 或其他具体 Agent。
 
 ## 项目边界
 

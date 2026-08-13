@@ -18,10 +18,10 @@ WeChat Agent Bot 是一个运行在本地的常驻服务：通过微信接收散
 
 ## 当前状态
 
-- Goal 1、Goal 2、Goal 3、Goal 4 和 Goal 5 已由散帅完成人工验收；Goal 6 尚未开始。
+- Goal 1 至 Goal 6 均已由散帅完成人工验收，MVP 已完成。
 - 当前支持扫码登录、会话恢复、文本接收、口语化任务入口、当前任务续接、项目切换、一个等待任务、状态查询、取消、有限频率进度、高风险操作的一次性二次确认，以及通过通用协议续接单个 Agent 会话并回传结果。
 - 微信绑定凭证保存在 `runtime-data/ilink/state.json`，有效期间持续复用；只有服务端明确返回 token 失效时才要求重新扫码，不做主动或定期刷新。
-- 开发严格按 `docs/plans/development-goals.md` 串行推进；当前下一步是规划 Goal 6，尚未进入实现。
+- 六个 MVP Goal 已严格按 `docs/plans/development-goals.md` 串行完成并通过验收。
 
 ## 当前微信指令
 
@@ -74,6 +74,8 @@ npm run service:stop
 - `docs/research/README.md`：调研主题、材料规范和结论状态。
 - `docs/decisions/001-ilink-channel-implementation.md`：微信通道实现决策。
 - `docs/architecture/agent-execution-protocol.md`：通用 Agent 进程协议和权限责任。
+- `docs/operations/runbook.md`：启动、停止、重新扫码和故障排查。
+- `docs/operations/mvp-acceptance.md`：MVP 端到端安全验收清单、证据和未完成项。
 - `docs/plans/development-goals.md`：串行开发 Goal、验收标准和推进规则。
 
 ## 目录约定

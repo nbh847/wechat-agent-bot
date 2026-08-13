@@ -6,6 +6,10 @@ export interface AgentRunRequest {
   version: typeof AGENT_PROTOCOL_VERSION;
   taskId: string;
   cwd: string;
+  controlProject: {
+    name: string;
+    path: string;
+  };
   targetProject: {
     name: string;
     path: string;
@@ -14,6 +18,7 @@ export interface AgentRunRequest {
   instruction: string;
   sessionId?: string;
   handoffSummary?: string;
+  persistSession: boolean;
   requiredContextFiles: string[];
   access: {
     readPaths: string[];
