@@ -2,14 +2,38 @@
 
 WeChat Agent Bot 是一个运行在本地的常驻服务：通过微信接收散帅发送的指令，将任务交给本地可用的 AI Agent 执行，再把结果回复到对应的微信会话。
 
-项目不绑定 Codex、Claude Code 或其他具体 Agent。微信通道采用 iLink Bot API，服务实现采用 TypeScript + Node.js；最小文本通道已经完成实现与验证，Agent 调度、权限控制和系统常驻运行尚未实现。
+项目不绑定 Codex、Claude Code 或其他具体 Agent。微信通道采用 iLink Bot API，服务实现采用 TypeScript + Node.js；微信文本通道和安全任务入口已经完成，Agent-neutral 执行协议和系统常驻运行尚未实现。
+
+## Agent 工作方式
+
+本仓库是所有本地 AI Agent 共用的工作上下文。无论由哪个 Agent 打开，都按同一顺序工作：
+
+1. 读取本文件，确认项目定位与通用入口。
+2. 读取 `AGENTS.md`，遵守安全边界、文档规则和变更纪律。
+3. 读取 `ROADMAP.md`，确认当前阶段、阻塞、最近验证和人工验收 Gate。
+4. 读取 `docs/plans/development-goals.md` 中当前 Goal，只实现该 Goal 的范围。
+5. 完成实现与验证后更新 `ROADMAP.md`，等待散帅人工验收；未验收不得进入下一个 Goal。
+
+`CLAUDE.md` 等工具专用文件只用于引导对应工具进入上述通用工作流，不定义独立流程。项目代码通过 Agent-neutral 协议与执行端交互；具体 Agent 只是可替换实现，不能成为核心架构前提。
 
 ## 当前状态
 
-- Goal 1 已由散帅完成人工验收，Goal 2“安全任务入口与确认协议”进行中。
-- 当前仅支持扫码登录、会话恢复以及文本接收和 Echo 回复。
+- Goal 1 和 Goal 2 已由散帅完成人工验收；Goal 3 尚未开始。
+- 当前支持扫码登录、会话恢复、文本接收、任务记录、状态查询、取消，以及高风险操作的一次性二次确认；不会启动 Agent 或执行任务。
 - 微信绑定凭证保存在 `runtime-data/ilink/state.json`，有效期间持续复用；只有服务端明确返回 token 失效时才要求重新扫码，不做主动或定期刷新。
-- 开发严格按 `docs/plans/development-goals.md` 串行推进；Goal 2 完成后仍需散帅人工验收，未通过前不开始 Goal 3。
+- 开发严格按 `docs/plans/development-goals.md` 串行推进；Goal 3 实现 Agent-neutral 执行协议，不预先绑定 Agent 品牌。
+
+## 当前微信指令
+
+```text
+task <project> <read|write> <任务说明>
+status <task-id>
+cancel <task-id>
+confirm <task-id> <确认码>
+reject <task-id> <确认码>
+```
+
+`project` 必须是 `/Users/mac/workspace` 下已有项目的相对路径。跨项目写入及删除、Git 高风险操作、凭证、数据库、全局依赖、系统配置、Cloudflare 和公开发布等操作必须二次确认。Goal 2 只记录任务与授权状态，即使确认通过也不会执行任务。
 
 ## 当前不做
 
@@ -19,8 +43,8 @@ WeChat Agent Bot 是一个运行在本地的常驻服务：通过微信接收散
 
 ## 文档入口
 
-- `AGENTS.md`：Codex 项目规则。
-- `CLAUDE.md`：Claude Code 项目规则。
+- `AGENTS.md`：所有 Agent 共用的项目规则真实来源。
+- `CLAUDE.md`：Claude Code 进入通用工作流的引导文件。
 - `ROADMAP.md`：项目阶段、待办和最近验证。
 - `docs/research/README.md`：调研主题、材料规范和结论状态。
 - `docs/decisions/001-ilink-channel-implementation.md`：微信通道实现决策。

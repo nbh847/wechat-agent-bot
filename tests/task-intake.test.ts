@@ -25,6 +25,19 @@ test("rejects unauthorized senders without creating a task", async () => {
   assert.deepEqual((await store.load()).tasks, {});
 });
 
+test("rejects every sender when no bound owner identity is available", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wechat-agent-no-owner-"));
+  const workspace = join(root, "workspace");
+  await mkdir(join(workspace, "wechat-agent-bot"), { recursive: true });
+  const store = new TaskStore(join(root, "tasks.json"));
+  const intake = new TaskIntake(store, workspace, "wechat-agent-bot", async () => undefined);
+  assert.match(
+    await intake.handle("owner", "task wechat-agent-bot read inspect README"),
+    /^拒绝/,
+  );
+  assert.deepEqual((await store.load()).tasks, {});
+});
+
 test("rejects paths outside the workspace", async () => {
   const { intake, store } = await createIntake();
   assert.match(await intake.handle("owner", "task ../outside read inspect"), /^拒绝/);
@@ -51,6 +64,21 @@ test("records a read-only task without executing it", async () => {
   assert.equal(task?.status, "received");
   assert.equal(task?.mode, "read");
   assert.equal((await stat(statePath)).mode & 0o777, 0o600);
+});
+
+test("task records and status survive a store restart", async () => {
+  const { intake, statePath } = await createIntake();
+  await intake.handle("owner", "task other-project read inspect README");
+  const restored = new TaskIntake(
+    new TaskStore(statePath),
+    join(statePath, "..", "..", "..", "workspace"),
+    "wechat-agent-bot",
+    async () => "owner",
+  );
+  assert.equal(
+    await restored.handle("owner", "status T0001"),
+    "T0001：received；read other-project: inspect README",
+  );
 });
 
 test("cross-project writes require a task-bound one-time confirmation", async () => {
