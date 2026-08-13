@@ -2,7 +2,7 @@
 
 WeChat Agent Bot 是一个运行在本地的常驻服务：通过微信接收散帅发送的指令，将任务交给本地可用的 AI Agent 执行，再把结果回复到对应的微信会话。
 
-项目不绑定 Codex、Claude Code 或其他具体 Agent。微信通道采用 iLink Bot API，服务实现采用 TypeScript + Node.js；微信文本通道、安全任务入口、Agent-neutral 单任务执行和连续会话已经完成，系统常驻运行尚未实现。
+项目不绑定 Codex、Claude Code 或其他具体 Agent。微信通道采用 iLink Bot API，服务实现采用 TypeScript + Node.js；微信文本通道、安全任务入口、Agent-neutral 单任务执行、连续会话和项目内常驻运行控制已经完成。`launchd` 只交付未安装模板，尚未启用系统开机常驻。
 
 ## Agent 工作方式
 
@@ -18,10 +18,10 @@ WeChat Agent Bot 是一个运行在本地的常驻服务：通过微信接收散
 
 ## 当前状态
 
-- Goal 1、Goal 2、Goal 3 和 Goal 4 已由散帅完成人工验收；Goal 5 尚未开始。
+- Goal 1、Goal 2、Goal 3、Goal 4 和 Goal 5 已由散帅完成人工验收；Goal 6 尚未开始。
 - 当前支持扫码登录、会话恢复、文本接收、口语化任务入口、当前任务续接、项目切换、一个等待任务、状态查询、取消、有限频率进度、高风险操作的一次性二次确认，以及通过通用协议续接单个 Agent 会话并回传结果。
 - 微信绑定凭证保存在 `runtime-data/ilink/state.json`，有效期间持续复用；只有服务端明确返回 token 失效时才要求重新扫码，不做主动或定期刷新。
-- 开发严格按 `docs/plans/development-goals.md` 串行推进；当前下一步是规划 Goal 5，尚未进入实现。
+- 开发严格按 `docs/plans/development-goals.md` 串行推进；当前下一步是规划 Goal 6，尚未进入实现。
 
 ## 当前微信指令
 
@@ -50,6 +50,16 @@ WECHAT_AGENT_EXECUTABLE=/absolute/path/to/adapter npm start
 
 适配器必须落实请求中的只读／写入路径权限，不得只依靠提示词限制 Agent。完整协议和安全责任见 `docs/architecture/agent-execution-protocol.md`。未配置执行端时，任务只会记录并明确回复“未执行”。
 
+## 本地运行控制
+
+```bash
+npm run service:start
+npm run service:status
+npm run service:stop
+```
+
+服务使用项目内单实例锁，健康状态和有限轮转日志写入 `runtime-data/service/`。`launchd` 模板见 `docs/operations/launchd.md`，当前未安装或启用。
+
 ## 当前不做
 
 - 不配置系统常驻服务，不支持多账号、群聊和媒体消息。
@@ -74,8 +84,11 @@ WECHAT_AGENT_EXECUTABLE=/absolute/path/to/adapter npm start
 - `docs/decisions/`：散帅已确认的重要技术与产品决策；编号按确认顺序递增。
 - `docs/plans/`：实施计划与阶段 Goal；完成状态以 `ROADMAP.md` 为准。
 - `docs/architecture/`：已经进入实现阶段的稳定协议、组件边界和安全责任说明。
+- `docs/operations/`：本地运行、故障恢复和系统服务模板；模板默认不安装，实际写入系统目录前必须单独确认。
 - `runtime-data/`：登录凭证、同步游标等本机运行数据；禁止提交，是否清理由散帅决定。
-- `src/`：项目源码；当前只包含 iLink 最小文本通道和 CLI。
+- `runtime-data/service/`：单实例锁、健康状态和有限保留日志；进程正常停止时清理锁文件，其他运行数据是否清理由散帅决定。
+- `scripts/`：项目内开发和运行控制脚本；不得安装为全局命令。
+- `src/`：项目源码；`src/runtime/` 保存单实例、健康状态和日志等本地运行基础能力。
 - `tests/`：与当前 Goal 验收标准直接相关的自动化测试。
 
 文件名使用小写英文和连字符。临时材料不得提交到项目目录；需要保留的材料应整理为调研文档。清理文件或目录前必须取得散帅确认。

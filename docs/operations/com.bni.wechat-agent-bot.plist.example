@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.bni.wechat-agent-bot</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/mac/.nvm/versions/node/v24.15.0/bin/node</string>
+    <string>/Users/mac/workspace/wechat-agent-bot/dist/src/cli.js</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/mac/workspace/wechat-agent-bot</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>WECHAT_AGENT_EXECUTABLE</key>
+    <string>/absolute/path/to/reviewed-adapter</string>
+  </dict>
+  <key>KeepAlive</key>
+  <true/>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

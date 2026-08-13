@@ -7,7 +7,10 @@
     "build": "tsc --noEmit false --outDir dist",
     "check": "tsc --noEmit",
     "test": "npm run build && node --test dist/tests/*.test.js",
-    "start": "npm run build && node dist/src/cli.js"
+    "start": "npm run build && node dist/src/cli.js",
+    "service:start": "npm run build && node scripts/service-control.mjs start",
+    "service:stop": "node scripts/service-control.mjs stop",
+    "service:status": "node scripts/service-control.mjs status"
   },
   "dependencies": {
     "qrcode": "^1.5.4"
