@@ -1,0 +1,26 @@
+node_modules/
+dist/
+runtime-data/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs and process files
+*.log
+*.pid
+npm-debug.log*
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Test and coverage output
+coverage/
+.nyc_output/

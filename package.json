@@ -1,0 +1,20 @@
+{
+  "name": "wechat-agent-bot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit false --outDir dist",
+    "check": "tsc --noEmit",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "start": "npm run build && node dist/src/cli.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5.9.3"
+  }
+}
