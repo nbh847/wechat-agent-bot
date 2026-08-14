@@ -1,5 +1,6 @@
 node_modules/
 dist/
+# Local runtime state and user-generated business data
 runtime-data/
 
 # Local configuration and credentials
