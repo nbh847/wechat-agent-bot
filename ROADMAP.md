@@ -109,3 +109,4 @@ Goal 1 至 Goal 6 均已由散帅完成人工验收，MVP 已完成。Goal 7 正
 - 2026-08-14：完成 Agent 协议 v2 两阶段分析／执行、结构化计划路径校验、自然语言原话委托和 Codex 适配器隔离；`npm run check`、58 个自动化测试、`npm audit`（0 vulnerabilities）和 `git diff --check` 通过。服务已重启验证监听，真实微信回归待散帅验收。
 - 2026-08-14：修复 QClaw 非敏感任务配置读取因“跳过凭据／token”等否定描述误触确认的问题；敏感访问改由 Agent 结构化声明并结合实际路径校验，不再扫描业务动作文本。`npm run check`、58 个自动化测试、`npm audit`（0 vulnerabilities）和 `git diff --check` 通过，真实微信回归待继续。
 - 2026-08-14：规定微信指令产生的待办、提醒、定时任务定义等持久业务数据统一写入已被 Git 忽略的 `runtime-data/user-data/`，与凭证、服务状态、日志和项目文档分开保存。
+- 2026-08-14：将 GitHub 初始化分支中的 MIT License 原样纳入项目 `main` 分支，避免统一默认分支时丢失开源协议。
