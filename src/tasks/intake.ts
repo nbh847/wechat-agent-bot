@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 
 import {
   confirmationReason,
+  proposalConfirmationReason,
   resolveProject,
   validateTaskProposal,
   type ResolvedProject,
@@ -368,11 +369,10 @@ export class TaskIntake {
     }
 
     const actionSummary = `${validated.mode} ${validated.project.name}: ${validated.instruction}`;
-    const reason = confirmationReason(
+    const reason = proposalConfirmationReason(
       validated.project.name,
       this.currentProject,
-      validated.mode,
-      `${validated.instruction}\n${validated.readPaths.join(" ")}`,
+      validated,
     );
     const code = reason ? randomBytes(3).toString("hex").toUpperCase() : undefined;
     const planned = await this.store.updateTask(task.id, (next) => {
@@ -388,6 +388,7 @@ export class TaskIntake {
         target: validated.project,
         mode: validated.mode,
         action: validated.instruction,
+        sensitiveAccess: validated.sensitiveAccess,
         readPaths: validated.readPaths,
         writePaths: validated.writePaths,
       };

@@ -96,6 +96,7 @@ test("analyzes raw user input without choosing a project in the Bot", async () =
       target: { name: "project", path: project },
       mode: "read",
       action: request.userInput,
+      sensitiveAccess: false,
       readPaths: [project],
       writePaths: [],
     },

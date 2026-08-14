@@ -25,6 +25,7 @@ export interface ValidatedTaskProposal {
   project: ResolvedProject;
   mode: TaskMode;
   instruction: string;
+  sensitiveAccess: boolean;
   readPaths: string[];
   writePaths: string[];
 }
@@ -93,7 +94,12 @@ export async function validateTaskProposal(
   if (!proposal.action?.trim() || proposal.action.length > 4_000) {
     throw new Error("Agent 计划缺少有效的具体动作");
   }
-  if (!proposal.target?.path || !Array.isArray(proposal.readPaths) || !Array.isArray(proposal.writePaths)) {
+  if (
+    !proposal.target?.path
+    || typeof proposal.sensitiveAccess !== "boolean"
+    || !Array.isArray(proposal.readPaths)
+    || !Array.isArray(proposal.writePaths)
+  ) {
     throw new Error("Agent 计划缺少有效的目标或权限范围");
   }
 
@@ -124,9 +130,28 @@ export async function validateTaskProposal(
     project,
     mode: proposal.mode,
     instruction: proposal.action.trim(),
+    sensitiveAccess: proposal.sensitiveAccess,
     readPaths,
     writePaths,
   };
+}
+
+export function proposalConfirmationReason(
+  project: string,
+  currentProject: string,
+  proposal: Pick<ValidatedTaskProposal, "mode" | "instruction" | "sensitiveAccess" | "readPaths">,
+): string | undefined {
+  if (proposal.mode === "write" && project !== currentProject) return "跨项目写入";
+  const pathSummary = [project, ...proposal.readPaths].join(" ");
+  if (proposal.sensitiveAccess || SENSITIVE_READ_PATTERNS.some(([pattern]) => pattern.test(pathSummary))) {
+    return "凭证、密钥或 .env 操作";
+  }
+  if (proposal.mode === "write") {
+    for (const [pattern, reason] of WRITE_RISK_PATTERNS) {
+      if (pattern.test(proposal.instruction)) return reason;
+    }
+  }
+  return undefined;
 }
 
 export function confirmationReason(

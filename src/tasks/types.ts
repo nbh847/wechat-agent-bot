@@ -25,6 +25,7 @@ export interface TaskProposal {
   };
   mode: TaskMode;
   action: string;
+  sensitiveAccess: boolean;
   readPaths: string[];
   writePaths: string[];
 }

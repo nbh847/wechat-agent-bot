@@ -21,12 +21,13 @@ Bot 把用户原话原样交给适配器，工作目录固定为 `wechat-agent-b
   "target": { "name": "repo-scout", "path": "/Users/mac/workspace/repo-scout" },
   "mode": "read",
   "action": "检查项目结构和测试覆盖并总结",
+  "sensitiveAccess": false,
   "readPaths": ["/Users/mac/workspace/repo-scout"],
   "writePaths": []
 }
 ```
 
-Bot 会重新解析路径、检查真实路径和符号链接、限制读写范围，并根据计划而不是用户关键词决定是否需要二次确认。计划无效、越界或无法落地时直接失败，不猜测、不补全。
+Bot 会重新解析路径、检查真实路径和符号链接、限制读写范围，并根据 `sensitiveAccess`、具体路径和写入风险决定是否需要二次确认，不从 Agent 的业务动作文本猜测敏感访问。计划无效、越界或无法落地时直接失败，不猜测、不补全。
 
 ### 2. 执行阶段
 
@@ -90,6 +91,7 @@ Bot 会重新解析路径、检查真实路径和符号链接、限制读写范�
     "target": { "name": "repo-scout", "path": "/Users/mac/workspace/repo-scout" },
     "mode": "read",
     "action": "检查项目结构",
+    "sensitiveAccess": false,
     "readPaths": ["/Users/mac/workspace/repo-scout"],
     "writePaths": []
   }

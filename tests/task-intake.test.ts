@@ -204,6 +204,7 @@ test("natural language is delegated as raw input and the Agent proposal is valid
       target: { name: "other-project", path: join(fixture.workspace, "other-project") },
       mode: "read",
       action: "检查 README 并总结定位",
+      sensitiveAccess: false,
       readPaths: [join(fixture.workspace, "other-project")],
       writePaths: [],
     };
@@ -227,6 +228,7 @@ test("natural language uses the Agent proposal for a cross-project confirmation"
     target: { name: "other-project", path: instruction.includes("标题") ? "" : "" },
     mode: "write",
     action: instruction,
+    sensitiveAccess: false,
     readPaths: [],
     writePaths: [],
   })));
@@ -250,6 +252,7 @@ test("natural language low-risk writes execute only after an Agent plan", async 
       target: { name: "wechat-agent-bot", path: control },
       mode: "write",
       action: "把待办想法记录到 ROADMAP.md",
+      sensitiveAccess: false,
       readPaths: [control],
       writePaths: [control],
     }),
@@ -288,7 +291,8 @@ test("local app discovery is delegated to the Agent and its paths are revalidate
   const executor = planner({
     target: { name: "~/.qclaw", path: join(fixture.home, ".qclaw") },
     mode: "read",
-    action: "查看 QClaw 配置和任务",
+    action: "读取 QClaw 任务配置，跳过凭据、密钥、token、日志和运行记录",
+    sensitiveAccess: false,
     readPaths: [join(fixture.home, ".qclaw")],
     writePaths: [],
   });
@@ -305,6 +309,7 @@ test("Agent plans outside the allowed workspace or home are rejected", async () 
     target: { name: "tmp", path: "/tmp" },
     mode: "read",
     action: "读取目录",
+    sensitiveAccess: false,
     readPaths: ["/tmp"],
     writePaths: [],
   }));
@@ -319,6 +324,7 @@ test("sensitive local read plans still require confirmation", async () => {
     target: { name: "~/.ssh", path: join(fixture.home, ".ssh") },
     mode: "read",
     action: "检查目录",
+    sensitiveAccess: true,
     readPaths: [join(fixture.home, ".ssh")],
     writePaths: [],
   });
