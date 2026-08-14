@@ -116,3 +116,4 @@ Goal 1 至 Goal 6 均已由散帅完成人工验收，MVP 已完成。Goal 7 正
 - 2026-08-14：统一 README 与运行手册的 Agent-neutral 启动说明，明确“操作仓库的 Agent”与“Bot 执行端”可以不同；启动者统一选择已验证适配器并通过 `WECHAT_AGENT_EXECUTABLE` 启动，其他执行端必须先实现协议适配器。`AGENTS.md` 同步要求任何 Agent 在启动、停止、重启或排障前必读运行手册。
 - 2026-08-14：将已验收 Goal 1 至 Goal 6 在开发计划中折叠为历史归档，新增 Goal 8“定时提醒基础”、Goal 9“定时 Agent 任务”和 Goal 10“混合任务与安全收尾”；当前 Gate 仍为 Goal 7 人工验收，不提前实施定时能力。
 - 2026-08-14：收紧 Goal 7 的 Agent 敏感访问计划：普通配置与任务清单必须显式返回空敏感证据；只有用户明确请求具体敏感内容时才允许提供真实敏感路径和理由。Bot 对缺少具体证据或仅以“配置目录可能敏感”为理由的计划失败关闭，避免 Claude 将普通 QClaw 清单误送入确认态；`npm run check`、68 个自动化测试、`npm audit`（0 vulnerabilities）和 `git diff --check` 通过，Claude 服务已重启并恢复 `listening`。
+- 2026-08-14：修复 Claude Bash 在外层文件沙箱中创建自身临时目录时报 `EPERM`：适配器为每次调用创建已授权的独立运行目录，并同时通过 `TMPDIR` 与 Claude Code 原生 `CLAUDE_TMPDIR` 传入；自动化验证该目录可写且未授权只读目录仍不可写，真实微信 `sqlite3` 只读任务待回归。

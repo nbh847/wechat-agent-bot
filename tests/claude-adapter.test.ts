@@ -45,10 +45,13 @@ if (process.cwd() !== ${JSON.stringify(control)}) {
 }
 let readOnlyWrite = false;
 try { writeFileSync(${JSON.stringify(join(readOnly, "write-probe"))}, "blocked"); readOnlyWrite = true; } catch {}
+let runtimeTempWrite = false;
+try { writeFileSync(join(process.env.TMPDIR, "bash-sandbox-probe"), "ok"); runtimeTempWrite = true; } catch {}
+const claudeTempMatches = process.env.CLAUDE_TMPDIR === process.env.TMPDIR;
 process.stdin.resume();
 process.stdin.on("end", () => process.stdout.write(JSON.stringify({
   type: "result", subtype: "success", is_error: false,
-  session_id: "claude-session", result: JSON.stringify({ cwdWrite, readOnlyWrite })
+  session_id: "claude-session", result: JSON.stringify({ cwdWrite, readOnlyWrite, runtimeTempWrite, claudeTempMatches })
 })));
 `);
   await chmod(fakeClaude, 0o755);
@@ -57,7 +60,7 @@ process.stdin.on("end", () => process.stdout.write(JSON.stringify({
   const fresh = await run(baseRequest(), env);
   assert.equal(fresh.status, "succeeded", fresh.error);
   assert.equal(fresh.sessionId, "claude-session");
-  assert.deepEqual(JSON.parse(fresh.summary ?? ""), { cwdWrite: null, readOnlyWrite: false });
+  assert.deepEqual(JSON.parse(fresh.summary ?? ""), { cwdWrite: null, readOnlyWrite: false, runtimeTempWrite: true, claudeTempMatches: true });
 
   const resumed = await run({ ...baseRequest(), sessionId: "claude-session" }, env);
   assert.equal(resumed.status, "succeeded", resumed.error);
@@ -73,7 +76,7 @@ process.stdin.on("end", () => process.stdout.write(JSON.stringify({
   }, env);
   assert.equal(write.status, "succeeded", write.error);
   assert.equal(write.sessionId, undefined);
-  assert.deepEqual(JSON.parse(write.summary ?? ""), { cwdWrite: true, readOnlyWrite: false });
+  assert.deepEqual(JSON.parse(write.summary ?? ""), { cwdWrite: true, readOnlyWrite: false, runtimeTempWrite: true, claudeTempMatches: true });
 
   const calls = (await readFile(argsLog, "utf8")).trim().split("\n").map((line) => JSON.parse(line));
   assert.ok(calls[0].includes("--safe-mode"));
