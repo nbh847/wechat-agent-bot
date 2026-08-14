@@ -2,7 +2,7 @@
 
 Claude Code 在本项目工作时，依次读取：
 
-1. `/Users/mac/workspace/WORKSPACE.md`
+1. `README.md`
 2. 本文件
 3. `AGENTS.md`
 4. `ROADMAP.md`

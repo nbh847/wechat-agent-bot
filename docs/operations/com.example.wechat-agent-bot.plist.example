@@ -3,14 +3,14 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.bni.wechat-agent-bot</string>
+  <string>com.example.wechat-agent-bot</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/mac/.nvm/versions/node/v24.15.0/bin/node</string>
-    <string>/Users/mac/workspace/wechat-agent-bot/dist/src/cli.js</string>
+    <string>/absolute/path/to/node</string>
+    <string>/absolute/path/to/wechat-agent-bot/dist/src/cli.js</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>/Users/mac/workspace/wechat-agent-bot</string>
+  <string>/absolute/path/to/wechat-agent-bot</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>WECHAT_AGENT_EXECUTABLE</key>

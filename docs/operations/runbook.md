@@ -2,16 +2,16 @@
 
 ## 运行前提
 
-- 项目路径固定为 `/Users/mac/workspace/wechat-agent-bot`。
+- 将项目克隆到本机任意固定路径。
 - 使用 Node.js 22 以上版本；当前已验证 Node.js 24.15.0。
 - 项目内正式 Codex 适配器为 `scripts/codex-adapter.mjs`；也可替换为其他经过权限审查、符合 `docs/architecture/agent-execution-protocol.md` 的适配器绝对路径。
 
 ## 构建与启动
 
 ```bash
-cd /Users/mac/workspace/wechat-agent-bot
+cd /absolute/path/to/wechat-agent-bot
 npm run build
-WECHAT_AGENT_EXECUTABLE=/Users/mac/workspace/wechat-agent-bot/scripts/codex-adapter.mjs npm run service:start
+WECHAT_AGENT_EXECUTABLE=/absolute/path/to/wechat-agent-bot/scripts/codex-adapter.mjs npm run service:start
 npm run service:status
 ```
 
@@ -20,7 +20,7 @@ npm run service:status
 ## 停止
 
 ```bash
-cd /Users/mac/workspace/wechat-agent-bot
+cd /absolute/path/to/wechat-agent-bot
 npm run service:stop
 npm run service:status
 ```

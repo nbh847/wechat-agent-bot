@@ -18,11 +18,11 @@ Bot 把用户原话原样交给适配器，工作目录固定为 `wechat-agent-b
 
 ```json
 {
-  "target": { "name": "repo-scout", "path": "/Users/mac/workspace/repo-scout" },
+  "target": { "name": "repo-scout", "path": "/Users/your-name/workspace/repo-scout" },
   "mode": "read",
   "action": "检查项目结构和测试覆盖并总结",
   "sensitiveAccess": false,
-  "readPaths": ["/Users/mac/workspace/repo-scout"],
+  "readPaths": ["/Users/your-name/workspace/repo-scout"],
   "writePaths": []
 }
 ```
@@ -56,10 +56,10 @@ Bot 会重新解析路径、检查真实路径和符号链接、限制读写范�
   "version": 2,
   "phase": "analyze",
   "taskId": "T0001",
-  "cwd": "/Users/mac/workspace/wechat-agent-bot",
+  "cwd": "/Users/your-name/workspace/wechat-agent-bot",
   "controlProject": {
     "name": "wechat-agent-bot",
-    "path": "/Users/mac/workspace/wechat-agent-bot"
+    "path": "/Users/your-name/workspace/wechat-agent-bot"
   },
   "mode": "read",
   "instruction": "用户原话",
@@ -67,7 +67,7 @@ Bot 会重新解析路径、检查真实路径和符号链接、限制读写范�
   "persistSession": false,
   "requiredContextFiles": [],
   "access": {
-    "readPaths": ["/Users/mac/workspace/wechat-agent-bot", "/Users/mac/workspace"],
+    "readPaths": ["/Users/your-name/workspace/wechat-agent-bot", "/Users/your-name/workspace"],
     "writePaths": []
   }
 }
@@ -88,11 +88,11 @@ Bot 会重新解析路径、检查真实路径和符号链接、限制读写范�
   "version": 2,
   "status": "succeeded",
   "proposal": {
-    "target": { "name": "repo-scout", "path": "/Users/mac/workspace/repo-scout" },
+    "target": { "name": "repo-scout", "path": "/Users/your-name/workspace/repo-scout" },
     "mode": "read",
     "action": "检查项目结构",
     "sensitiveAccess": false,
-    "readPaths": ["/Users/mac/workspace/repo-scout"],
+    "readPaths": ["/Users/your-name/workspace/repo-scout"],
     "writePaths": []
   }
 }
