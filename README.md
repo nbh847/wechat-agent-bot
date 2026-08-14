@@ -2,7 +2,7 @@
 
 通过微信给本地 AI Agent 发送任务，并接收执行结果。
 
-项目不绑定具体 Agent。仓库自带 Codex 适配器，Claude Code、Kimi Code 等其他 Agent 可通过统一 JSON 协议接入。
+项目不绑定具体 Agent。仓库自带 Codex 和 Claude Code 适配器，Kimi Code 等其他 Agent 可通过统一 JSON 协议接入。
 
 ## 功能
 
@@ -26,17 +26,27 @@ Bot 负责微信通信、上下文、任务生命周期和安全校验；Agent �
 
 - Node.js 22 或更高版本。
 - 一个符合项目协议的本地 Agent 适配器。
-- 使用仓库自带适配器时，需要已安装并登录 Codex CLI。
+- 使用仓库自带适配器时，需要已安装并登录对应的 Codex 或 Claude Code CLI。
+- Claude Code 适配器当前依赖 macOS `sandbox-exec` 落实文件系统写入隔离。
 
 ## 快速开始
+
+启动 Bot 的 Agent 与 Bot 使用的执行端可以不同。无论当前由 Codex、Claude Code、Kimi Code 或其他 Agent 操作本仓库，都先选择本机可用的执行适配器，再用同一条命令启动服务。
 
 ```bash
 git clone https://github.com/nbh847/wechat-agent-bot.git
 cd wechat-agent-bot
 npm install
-WECHAT_AGENT_EXECUTABLE=/absolute/path/to/wechat-agent-bot/scripts/codex-adapter.mjs npm run service:start
+WECHAT_AGENT_EXECUTABLE="$PWD/scripts/claude-adapter.mjs" npm run service:start
 npm run service:status
 ```
+
+仓库当前提供两个可直接使用的适配器：
+
+- Claude Code：`$PWD/scripts/claude-adapter.mjs`
+- Codex：`$PWD/scripts/codex-adapter.mjs`
+
+将示例命令中的路径换成需要的适配器即可。其他 Agent 可以负责启动 Bot，但若要让它成为 Bot 的执行端，必须先提供符合统一协议的适配器，不能把 Agent CLI 本身直接填入 `WECHAT_AGENT_EXECUTABLE`。
 
 首次启动会在 `runtime-data/ilink/login-qr.png` 生成微信登录二维码。扫码确认后，服务状态显示为 `listening` 即可开始使用。
 
@@ -50,7 +60,7 @@ npm run service:stop
 
 ## 接入其他 Agent
 
-执行端通过 JSON 进程协议接入。适配器需要实现任务分析和任务执行两个阶段，并落实请求中的文件读写权限。
+执行端通过 JSON 进程协议接入。适配器需要实现任务分析和任务执行两个阶段，并落实请求中的文件读写权限。启动 Bot 的 Agent 不需要与这里选择的执行端相同。
 
 协议说明见 [Agent 执行协议](docs/architecture/agent-execution-protocol.md) 。Claude Code、Kimi Code 或其他 Agent 只需提供符合该协议的适配器，无需修改 Bot 核心逻辑。
 

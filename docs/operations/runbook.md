@@ -4,16 +4,27 @@
 
 - 将项目克隆到本机任意固定路径。
 - 使用 Node.js 22 以上版本；当前已验证 Node.js 24.15.0。
-- 项目内正式 Codex 适配器为 `scripts/codex-adapter.mjs`；也可替换为其他经过权限审查、符合 `docs/architecture/agent-execution-protocol.md` 的适配器绝对路径。
+- 项目内提供 `scripts/codex-adapter.mjs` 和 `scripts/claude-adapter.mjs`；也可替换为其他经过权限审查、符合 `docs/architecture/agent-execution-protocol.md` 的适配器绝对路径。
+- Claude Code 适配器需要 macOS `sandbox-exec`，并要求本机 Claude Code CLI 已登录。
 
 ## 构建与启动
 
+当前操作仓库的 Agent 只负责按文档启动服务，不因此自动成为 Bot 的执行端。启动前先从下表选择一个本机已安装并登录的执行端：
+
+| 执行端 | `WECHAT_AGENT_EXECUTABLE` |
+| --- | --- |
+| Claude Code | `$PWD/scripts/claude-adapter.mjs` |
+| Codex | `$PWD/scripts/codex-adapter.mjs` |
+
+标准启动流程如下，示例选择 Claude Code；切换执行端时只替换适配器路径：
+
 ```bash
 cd /absolute/path/to/wechat-agent-bot
-npm run build
-WECHAT_AGENT_EXECUTABLE=/absolute/path/to/wechat-agent-bot/scripts/codex-adapter.mjs npm run service:start
+WECHAT_AGENT_EXECUTABLE="$PWD/scripts/claude-adapter.mjs" npm run service:start
 npm run service:status
 ```
+
+`service:start` 会先构建项目，无需单独执行 `npm run build`。其他 Agent 可以执行上述启动命令；若要作为 Bot 的执行端，必须先实现并验证符合 `docs/architecture/agent-execution-protocol.md` 的适配器，再将其绝对路径传给 `WECHAT_AGENT_EXECUTABLE`。不得把普通 Agent CLI 路径直接当作适配器路径。
 
 健康状态为 `listening` 才表示微信长轮询已经启动。`service:start` 只在本机后台启动，不配置开机自启。
 
@@ -62,7 +73,7 @@ npm run service:status
 
 ### 服务显示 `stopped`
 
-确认已设置长期适配器路径，再运行 `service:start`。若刚执行过构建或系统重启，需要重新启动；当前未启用开机自启。
+按“构建与启动”选择适配器并在同一条命令中设置 `WECHAT_AGENT_EXECUTABLE`，再运行 `service:start`。若刚执行过构建或系统重启，需要重新启动；当前未启用开机自启。
 
 ### 微信无回复
 

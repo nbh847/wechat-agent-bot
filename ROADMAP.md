@@ -112,3 +112,6 @@ Goal 1 至 Goal 6 均已由散帅完成人工验收，MVP 已完成。Goal 7 正
 - 2026-08-14：将 GitHub 初始化分支中的 MIT License 原样纳入项目 `main` 分支，避免统一默认分支时丢失开源协议。
 - 2026-08-14：面向开源使用者精简 README，将公开文档和 `launchd` 模板中的本机绝对路径与个人化标识替换为通用示例；完整 Git 历史未发现密钥、token、凭据或运行数据，提交身份已统一为 GitHub noreply 邮箱。
 - 2026-08-14：新增当前上下文微信消息本地持久化，保存用户文本与 Bot 回复但不保存原始报文或敏感凭据；对话、已结束任务、微信上下文 token、待发送回复和消息去重记录均增加时间或数量清理边界，活跃任务与有效登录凭证保留。`npm run check`、64 个自动化测试、`npm audit`（0 vulnerabilities）和 `git diff --check` 通过，真实微信重启验收待继续。
+- 2026-08-14：新增 Claude Code Agent v2 适配器，支持结构化分析、只读会话续接、写会话隔离、SIGTERM 取消和 JSON 结果回传；使用 Claude CLI 权限参数与 macOS `sandbox-exec` 限制文件访问。真实 Claude 无工具结构化输出、`npm run check`、67 个自动化／隔离测试、`npm audit`（0 vulnerabilities）和 `git diff --check` 已通过；散帅已授权将 `README.md`、`AGENTS.md` 和 `ROADMAP.md` 交给 Claude 验证，真实 Claude 已正确返回三份规则文件的只读结构化执行计划。
+- 2026-08-14：本地微信服务已从 Codex 适配器切换至 Claude Code 适配器并恢复 `listening`；真实微信执行回复和连续上下文仍待人工验收。
+- 2026-08-14：统一 README 与运行手册的 Agent-neutral 启动说明，明确“操作仓库的 Agent”与“Bot 执行端”可以不同；启动者统一选择已验证适配器并通过 `WECHAT_AGENT_EXECUTABLE` 启动，其他执行端必须先实现协议适配器。`AGENTS.md` 同步要求任何 Agent 在启动、停止、重启或排障前必读运行手册。
