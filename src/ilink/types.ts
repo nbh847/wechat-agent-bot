@@ -62,6 +62,7 @@ export interface ChannelState {
   credentials?: Credentials;
   cursor: string;
   contextTokens: Record<string, string>;
+  contextTokenUpdatedAt: Record<string, string>;
   processedMessageIds: string[];
   pendingReplies: Record<string, PendingReply>;
 }
@@ -70,4 +71,5 @@ export interface PendingReply {
   messageId: string;
   userId: string;
   text: string;
+  createdAt?: string;
 }

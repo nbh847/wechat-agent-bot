@@ -32,6 +32,8 @@ export interface TaskProposal {
 
 export interface ConversationRecord {
   senderId: string;
+  historyContextId?: string;
+  historyContextStartedAt?: string;
   currentTaskId?: string;
   defaultTargetProject?: string;
   defaultTargetProjectPath?: string;
@@ -53,6 +55,7 @@ export interface TaskRecord {
   mode: TaskMode;
   instruction: string;
   actionSummary: string;
+  conversationContextId?: string;
   proposal?: TaskProposal;
   parentTaskId?: string;
   resumeSessionId?: string;

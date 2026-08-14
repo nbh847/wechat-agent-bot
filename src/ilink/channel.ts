@@ -61,6 +61,7 @@ export class ILinkTextChannel {
               next.credentials = undefined;
               next.cursor = "";
               next.contextTokens = {};
+              next.contextTokenUpdatedAt = {};
               next.pendingReplies = {};
             });
             callbacks.onTokenExpired?.();
@@ -102,7 +103,12 @@ export class ILinkTextChannel {
     signal?: AbortSignal,
   ): Promise<void> {
     await this.store.update((next) => {
-      next.pendingReplies[replyId] = { messageId: replyId, userId, text };
+      next.pendingReplies[replyId] = {
+        messageId: replyId,
+        userId,
+        text,
+        createdAt: new Date().toISOString(),
+      };
     });
     await this.flushPendingReplies(signal ?? new AbortController().signal);
   }
@@ -122,6 +128,7 @@ export class ILinkTextChannel {
       // execute the same remote instruction twice.
       await this.store.update((next) => {
         next.contextTokens[message.userId] = message.contextToken;
+        next.contextTokenUpdatedAt[message.userId] = new Date().toISOString();
         next.processedMessageIds.push(message.id);
       });
       const response = await callbacks.onText(message);
@@ -131,6 +138,7 @@ export class ILinkTextChannel {
             messageId: message.id,
             userId: message.userId,
             text: response,
+            createdAt: new Date().toISOString(),
           };
         });
         await this.flushPendingReplies(signal);

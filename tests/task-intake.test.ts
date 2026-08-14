@@ -402,3 +402,38 @@ test("starts a fresh agent session after 30 turns but not when the target change
   await second.intake.handle("owner", "检查 other-project README");
   assert.equal((await second.store.get("T0001"))?.resumeSessionId, "active-session");
 });
+
+test("task store expires terminal records but preserves active tasks", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wechat-agent-task-retention-"));
+  let now = new Date("2026-08-14T00:00:00.000Z");
+  const store = new TaskStore(join(root, "tasks.json"), {
+    terminalTtlMs: 100,
+    maxTerminalTasks: 2,
+    conversationTtlMs: 100,
+    maxConversations: 2,
+    now: () => now,
+  });
+  const active = await store.create((id, createdAt) => ({
+    id, senderId: "owner", project: "project", projectPath: "unused", mode: "read",
+    instruction: "active", actionSummary: "active", status: "running", createdAt, updatedAt: createdAt,
+  }));
+  const terminal = await store.create((id, createdAt) => ({
+    id, senderId: "owner", project: "project", projectPath: "unused", mode: "read",
+    instruction: "done", actionSummary: "done", status: "succeeded", createdAt, updatedAt: createdAt,
+  }));
+  now = new Date(now.getTime() + 200);
+  await store.updateConversation("owner", () => undefined);
+  assert.equal((await store.get(active.id))?.status, "running");
+  assert.equal(await store.get(terminal.id), undefined);
+});
+
+test("new sessions rotate the persisted conversation context id", async () => {
+  const { intake, store } = await createIntake();
+  await intake.handle("owner", "状态");
+  const first = (await store.getConversation("owner"))?.historyContextId;
+  assert.ok(first);
+  await intake.handle("owner", "新会话");
+  const second = (await store.getConversation("owner"))?.historyContextId;
+  assert.ok(second);
+  assert.notEqual(second, first);
+});

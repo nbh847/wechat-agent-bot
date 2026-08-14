@@ -5,11 +5,26 @@ import type { ConversationRecord, TaskRecord, TaskState } from "./types.js";
 
 const EMPTY_STATE: TaskState = { nextId: 1, tasks: {}, conversations: {} };
 
+const TERMINAL_STATUSES = new Set<TaskRecord["status"]>([
+  "succeeded", "failed", "timed_out", "cancelled", "rejected", "interrupted",
+]);
+
+export interface TaskRetention {
+  terminalTtlMs?: number;
+  maxTerminalTasks?: number;
+  conversationTtlMs?: number;
+  maxConversations?: number;
+  now?: () => Date;
+}
+
 export class TaskStore {
   private state?: TaskState;
   private writes: Promise<void> = Promise.resolve();
 
-  constructor(private readonly path: string) {}
+  constructor(
+    private readonly path: string,
+    private readonly retention: TaskRetention = {},
+  ) {}
 
   async load(): Promise<TaskState> {
     if (this.state) return structuredClone(this.state);
@@ -46,7 +61,7 @@ export class TaskStore {
     await this.update((state) => {
       const id = `T${String(state.nextId).padStart(4, "0")}`;
       state.nextId++;
-      created = build(id, new Date().toISOString());
+      created = build(id, this.nowIso());
       state.tasks[id] = created;
     });
     return structuredClone(created!);
@@ -71,7 +86,7 @@ export class TaskStore {
       const task = state.tasks[id];
       if (!task) return;
       mutate(task);
-      task.updatedAt = new Date().toISOString();
+      task.updatedAt = this.nowIso();
       updated = task;
     });
     return updated ? structuredClone(updated) : undefined;
@@ -89,10 +104,10 @@ export class TaskStore {
     await this.update((state) => {
       const conversation = state.conversations[senderId] ?? {
         senderId,
-        updatedAt: new Date().toISOString(),
+        updatedAt: this.nowIso(),
       };
       mutate(conversation);
-      conversation.updatedAt = new Date().toISOString();
+      conversation.updatedAt = this.nowIso();
       state.conversations[senderId] = conversation;
       updated = conversation;
     });
@@ -121,6 +136,7 @@ export class TaskStore {
     const write = this.writes.then(async () => {
       const next = await this.load();
       mutator(next);
+      pruneTaskState(next, this.retention);
       await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
       const temporaryPath = `${this.path}.tmp`;
       await writeFile(temporaryPath, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
@@ -129,5 +145,42 @@ export class TaskStore {
     });
     this.writes = write.catch(() => undefined);
     await write;
+  }
+
+  private nowIso(): string {
+    return (this.retention.now ?? (() => new Date()))().toISOString();
+  }
+}
+
+function pruneTaskState(state: TaskState, retention: TaskRetention): void {
+  const now = (retention.now ?? (() => new Date()))().getTime();
+  const terminalTtlMs = retention.terminalTtlMs ?? 90 * 24 * 60 * 60_000;
+  const maxTerminalTasks = retention.maxTerminalTasks ?? 1_000;
+  const terminal = Object.values(state.tasks)
+    .filter((task) => TERMINAL_STATUSES.has(task.status))
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  for (const [index, task] of terminal.entries()) {
+    const timestamp = Date.parse(task.updatedAt);
+    if (index >= maxTerminalTasks || !Number.isFinite(timestamp) || now - timestamp > terminalTtlMs) {
+      delete state.tasks[task.id];
+    }
+  }
+
+  const conversationTtlMs = retention.conversationTtlMs ?? 30 * 24 * 60 * 60_000;
+  const maxConversations = retention.maxConversations ?? 30;
+  const conversations = Object.values(state.conversations)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  for (const [index, conversation] of conversations.entries()) {
+    const timestamp = Date.parse(conversation.updatedAt);
+    const hasActiveTask = Object.values(state.tasks).some(
+      (task) => task.senderId === conversation.senderId && !TERMINAL_STATUSES.has(task.status),
+    );
+    if (!hasActiveTask && (
+      index >= maxConversations
+      || !Number.isFinite(timestamp)
+      || now - timestamp > conversationTtlMs
+    )) {
+      delete state.conversations[conversation.senderId];
+    }
   }
 }

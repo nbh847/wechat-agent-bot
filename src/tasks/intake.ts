@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 
 import {
@@ -43,6 +43,8 @@ export class TaskIntake {
   async handle(senderId: string, input: string): Promise<string> {
     const authorized = await this.authorizedSenderId();
     if (!authorized || senderId !== authorized) return "拒绝：当前微信用户未获得任务权限。";
+
+    await this.ensureHistoryContext(senderId);
 
     const text = input.trim();
     const naturalDecision = /^(确认|拒绝)(?:\s+([\s\S]+))?$/.exec(text);
@@ -94,6 +96,7 @@ export class TaskIntake {
       mode,
       instruction,
       actionSummary,
+      conversationContextId: session.contextId,
       parentTaskId: conversation?.currentTaskId,
       resumeSessionId: session.sessionId,
       handoffSummary: session.handoffSummary,
@@ -242,6 +245,8 @@ export class TaskIntake {
     }
     if (/^(?:新任务|新会话|new session)$/i.test(text)) {
       await this.store.updateConversation(senderId, (conversation) => {
+        conversation.historyContextId = randomUUID();
+        conversation.historyContextStartedAt = new Date().toISOString();
         conversation.currentTaskId = undefined;
         conversation.defaultTargetProject = undefined;
         conversation.defaultTargetProjectPath = undefined;
@@ -258,6 +263,10 @@ export class TaskIntake {
       const task = await this.ownedTask(senderId, continueMatch[1].toUpperCase());
       if (!task) return "未找到对应任务。";
       await this.store.updateConversation(senderId, (conversation) => {
+        if (task.conversationContextId) {
+          conversation.historyContextId = task.conversationContextId;
+          conversation.historyContextStartedAt = task.createdAt;
+        }
         conversation.currentTaskId = task.id;
         conversation.agentSessionId = task.execution?.sessionId;
         conversation.sessionReadPaths = task.authorizedReadPaths ?? [task.projectPath];
@@ -293,6 +302,7 @@ export class TaskIntake {
       session.sessionId,
       session.handoffSummary,
       session.resetReadPaths ? [] : conversation?.sessionReadPaths,
+      session.contextId,
     );
   }
 
@@ -304,6 +314,7 @@ export class TaskIntake {
     resumeSessionId?: string,
     handoffSummary?: string,
     sessionReadPaths?: string[],
+    conversationContextId?: string,
   ): Promise<string> {
     const initialActionSummary = `待 Agent 分析：${instruction}`;
     const task = await this.store.create((id, now) => ({
@@ -315,6 +326,7 @@ export class TaskIntake {
       mode: "read",
       instruction,
       actionSummary: initialActionSummary,
+      conversationContextId,
       parentTaskId,
       resumeSessionId,
       handoffSummary,
@@ -432,19 +444,38 @@ export class TaskIntake {
   private async sessionForNextTask(
     conversation: Awaited<ReturnType<TaskStore["getConversation"]>>,
     senderId: string,
-  ): Promise<{ sessionId?: string; handoffSummary?: string; resetReadPaths?: boolean }> {
-    if (!conversation?.agentSessionId) return { resetReadPaths: true };
+  ): Promise<{ sessionId?: string; handoffSummary?: string; resetReadPaths?: boolean; contextId?: string }> {
+    if (!conversation?.agentSessionId) {
+      return { resetReadPaths: true, contextId: conversation?.historyContextId };
+    }
     const expiredByDate = conversation.agentSessionDate !== undefined
       && conversation.agentSessionDate !== shanghaiDate();
     const expiredByTurns = (conversation.agentTurnCount ?? 0) >= AGENT_SESSION_TURN_LIMIT;
-    if (!expiredByDate && !expiredByTurns) return { sessionId: conversation.agentSessionId };
+    if (!expiredByDate && !expiredByTurns) {
+      return { sessionId: conversation.agentSessionId, contextId: conversation.historyContextId };
+    }
     const current = conversation.currentTaskId
       ? await this.ownedTask(senderId, conversation.currentTaskId)
       : undefined;
+    const rotated = await this.rotateHistoryContext(senderId);
     return {
       handoffSummary: buildHandoffSummary(conversation, current, expiredByDate ? "跨自然日" : "达到 30 轮"),
       resetReadPaths: true,
+      contextId: rotated.historyContextId,
     };
+  }
+
+  private async ensureHistoryContext(senderId: string): Promise<void> {
+    const existing = await this.store.getConversation(senderId);
+    if (existing?.historyContextId) return;
+    await this.rotateHistoryContext(senderId);
+  }
+
+  private async rotateHistoryContext(senderId: string) {
+    return this.store.updateConversation(senderId, (conversation) => {
+      conversation.historyContextId = randomUUID();
+      conversation.historyContextStartedAt = new Date().toISOString();
+    });
   }
 
   private async markQueueFull(taskId: string): Promise<void> {

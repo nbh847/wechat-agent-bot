@@ -38,9 +38,21 @@ npm run service:status
 - 健康状态：`runtime-data/service/health.json`。
 - 服务日志：`runtime-data/service/service.log`，单文件最多约 1 MB，最多保留当前文件和 3 个轮转文件。
 - 任务状态：`runtime-data/tasks/state.json`。
+- 上下文消息：`runtime-data/conversations/state.json`。
 - 微信凭证、游标和待回复：`runtime-data/ilink/state.json`。
 
 这些文件均属于本机运行数据，不提交、不复制到其他目录、不输出内容。是否清理由散帅决定。
+
+## 数据保留
+
+- 上下文消息：30 天，最多 30 个上下文，每个上下文最多 200 条消息。
+- 已结束任务：90 天，最多 1000 条；运行中、排队和待确认任务不自动删除。
+- 微信上下文 token：30 天，最多 100 个。
+- 待发送回复：7 天，最多 1000 条。
+- 消息去重 ID：最近 1000 个。
+- 服务日志：单文件约 1 MB，保留当前文件和 3 个轮转文件。
+
+登录凭证只在服务端明确判定失效时清理。待办、提醒和定时任务等业务数据按自身状态清理，不使用统一创建时间 TTL。
 
 ## 故障排查
 

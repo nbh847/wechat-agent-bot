@@ -17,11 +17,13 @@ import { TaskStore } from "./tasks/store.js";
 import { RotatingFileLogger } from "./runtime/file-logger.js";
 import { HealthReporter } from "./runtime/health.js";
 import { acquireInstanceLock } from "./runtime/single-instance.js";
+import { ConversationHistoryStore } from "./runtime/conversation-history.js";
 
 const runtimeDir = resolve("runtime-data/ilink");
 const statePath = resolve(runtimeDir, "state.json");
 const qrPath = resolve(runtimeDir, "login-qr.png");
 const taskStatePath = resolve("runtime-data/tasks/state.json");
+const conversationHistoryPath = resolve("runtime-data/conversations/state.json");
 const workspacePath = resolve("..");
 const serviceRuntimeDir = resolve("runtime-data/service");
 const instanceLockPath = resolve(serviceRuntimeDir, "instance.lock");
@@ -43,6 +45,8 @@ const logger = {
 const login = new LoginManager(api, store, logger);
 const channel = new ILinkTextChannel(api, login, store, logger);
 const taskStore = new TaskStore(taskStatePath);
+const conversationHistory = new ConversationHistoryStore(conversationHistoryPath);
+await conversationHistory.prune();
 const serviceProjectPath = resolve(".");
 const interruptedTasks = await taskStore.recoverInterrupted();
 if (interruptedTasks.length > 0) {
@@ -56,6 +60,7 @@ const coordinator = agentExecutable
       new ProcessAgentRunner(agentExecutable),
       {
         onStarted: async (task) => {
+          await recordBotMessage(task, "已开始生成回复。");
           await channel.queueReply(
             `execution-started:${task.id}`,
             task.senderId,
@@ -63,17 +68,21 @@ const coordinator = agentExecutable
           );
         },
         onProgress: async (task) => {
+          const text = "仍在生成回复中；可发送“状态”查看，或“取消当前任务”取消。";
+          await recordBotMessage(task, text);
           await channel.queueReply(
             `execution-progress:${task.id}:${Math.floor(Date.now() / 120_000)}`,
             task.senderId,
-            "仍在生成回复中；可发送“状态”查看，或“取消当前任务”取消。",
+            text,
           );
         },
         onFinished: async (task) => {
+          const text = formatExecutionResult(task);
+          await recordBotMessage(task, text);
           await channel.queueReply(
             `execution:${task.id}`,
             task.senderId,
-            formatExecutionResult(task),
+            text,
           );
         },
       },
@@ -91,6 +100,11 @@ const intake = new TaskIntake(
   async () => (await store.load()).credentials?.userId,
   coordinator,
 );
+
+async function recordBotMessage(task: { senderId: string; conversationContextId?: string }, text: string) {
+  if (!task.conversationContextId) return;
+  await conversationHistory.append(task.conversationContextId, task.senderId, "bot", text);
+}
 
 const shutdown = () => {
   fileLogger.info("服务正在停止");
@@ -121,7 +135,19 @@ try {
       fileLogger.info(restored ? "iLink 会话已恢复，正在监听文本" : "iLink 登录成功，正在监听文本");
       console.log(restored ? "iLink 会话已恢复，正在监听文本" : "iLink 登录成功，正在监听文本");
     },
-    onText: async (message) => intake.handle(message.userId, message.text),
+    onText: async (message) => {
+      const response = await intake.handle(message.userId, message.text);
+      const conversation = await taskStore.getConversation(message.userId);
+      if (conversation?.historyContextId) {
+        await conversationHistory.appendTurn(
+          conversation.historyContextId,
+          message.userId,
+          message.text,
+          response,
+        );
+      }
+      return response;
+    },
     onTokenExpired: () => {
       void health.write("token_expired");
       fileLogger.error("iLink 登录凭证已失效，请重新扫码");
