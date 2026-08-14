@@ -87,9 +87,27 @@ function isAgentRunResult(value: unknown): value is AgentRunResult {
   if (result.sessionId !== undefined && typeof result.sessionId !== "string") return false;
   if (result.summary !== undefined && typeof result.summary !== "string") return false;
   if (result.error !== undefined && typeof result.error !== "string") return false;
+  if (result.proposal !== undefined && !isTaskProposal(result.proposal)) return false;
   return result.status === "succeeded"
-    ? typeof result.summary === "string"
+    ? typeof result.summary === "string" || result.proposal !== undefined
     : typeof result.error === "string";
+}
+
+function isTaskProposal(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const proposal = value as Record<string, unknown>;
+  const target = proposal.target;
+  return Boolean(
+    target && typeof target === "object"
+      && typeof (target as Record<string, unknown>).name === "string"
+      && typeof (target as Record<string, unknown>).path === "string"
+      && (proposal.mode === "read" || proposal.mode === "write")
+      && typeof proposal.action === "string"
+      && Array.isArray(proposal.readPaths)
+      && Array.isArray(proposal.writePaths)
+      && proposal.readPaths.every((path) => typeof path === "string")
+      && proposal.writePaths.every((path) => typeof path === "string"),
+  );
 }
 
 function allowedEnvironment(): NodeJS.ProcessEnv {

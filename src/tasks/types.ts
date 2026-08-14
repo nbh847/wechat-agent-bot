@@ -1,6 +1,7 @@
 export type TaskMode = "read" | "write";
 export type TaskStatus =
   | "received"
+  | "planning"
   | "awaiting_confirmation"
   | "approved"
   | "queued"
@@ -11,6 +12,22 @@ export type TaskStatus =
   | "cancelled"
   | "rejected"
   | "interrupted";
+
+/**
+ * A plan is the only business-shaped data the Agent is allowed to hand back
+ * to the Bot.  The Bot does not infer these fields from the user's prose; it
+ * only validates their safety before an execution request is created.
+ */
+export interface TaskProposal {
+  target: {
+    name: string;
+    path: string;
+  };
+  mode: TaskMode;
+  action: string;
+  readPaths: string[];
+  writePaths: string[];
+}
 
 export interface ConversationRecord {
   senderId: string;
@@ -35,6 +52,7 @@ export interface TaskRecord {
   mode: TaskMode;
   instruction: string;
   actionSummary: string;
+  proposal?: TaskProposal;
   parentTaskId?: string;
   resumeSessionId?: string;
   handoffSummary?: string;

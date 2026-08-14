@@ -4,21 +4,33 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { TaskIntake } from "../src/tasks/intake.js";
+import { TaskIntake, type TaskExecutor } from "../src/tasks/intake.js";
 import { TaskStore } from "../src/tasks/store.js";
+import type { TaskProposal } from "../src/tasks/types.js";
 
-async function createIntake() {
+async function createIntake(executor?: TaskExecutor) {
   const root = await mkdtemp(join(tmpdir(), "wechat-agent-tasks-"));
   const workspace = join(root, "workspace");
   const home = join(root, "home");
   await mkdir(join(workspace, "wechat-agent-bot"), { recursive: true });
   await mkdir(join(workspace, "other-project"));
   await mkdir(join(home, ".openclaw"), { recursive: true });
+  await mkdir(join(home, ".qclaw"), { recursive: true });
+  await mkdir(join(home, "Library/Application Support/QClaw"), { recursive: true });
+  await mkdir(join(home, "Library/Application Support/com.tencent.qclaw"), { recursive: true });
   await mkdir(join(home, ".ssh"));
   const statePath = join(root, "runtime-data", "tasks.json");
   const store = new TaskStore(statePath);
-  const intake = new TaskIntake(store, workspace, "wechat-agent-bot", async () => "owner", undefined, home);
-  return { home, intake, statePath, store };
+  const intake = new TaskIntake(store, workspace, "wechat-agent-bot", async () => "owner", executor, home);
+  return { home, workspace, intake, statePath, store };
+}
+
+function planner(proposal: TaskProposal | ((instruction: string) => TaskProposal)): TaskExecutor {
+  return {
+    plan: async (task) => typeof proposal === "function" ? proposal(task.instruction) : proposal,
+    start: async () => "started",
+    cancel: async () => false,
+  };
 }
 
 test("rejects unauthorized senders without creating a task", async () => {
@@ -62,7 +74,7 @@ test("rejects a workspace symlink that resolves outside the workspace", async ()
 test("records a read-only task without executing it", async () => {
   const { intake, statePath, store } = await createIntake();
   const response = await intake.handle("owner", "task other-project read inspect README");
-  assert.equal(response, "已接收 T0001：当前没有可用执行端，任务未执行。");
+  assert.equal(response, "当前没有可用执行端，任务未执行。");
   const task = await store.get("T0001");
   assert.equal(task?.status, "received");
   assert.equal(task?.mode, "read");
@@ -135,7 +147,7 @@ test("read-only risk analysis is not mistaken for a release operation", async ()
     "owner",
     "task other-project read 全面检查测试覆盖和发布前风险",
   );
-  assert.equal(response, "已接收 T0001：当前没有可用执行端，任务未执行。");
+  assert.equal(response, "当前没有可用执行端，任务未执行。");
   assert.equal((await store.get("T0001"))?.status, "received");
 });
 
@@ -183,42 +195,69 @@ test("cancel delegates to an active executor before changing stored state", asyn
   assert.equal((await store.get("T0001"))?.status, "received");
 });
 
-test("natural language uses the current project and continues the agent session", async () => {
-  const { intake, store } = await createIntake();
-  assert.equal(await intake.handle("owner", "切换项目 other-project"), "已设置默认目标项目：other-project。请继续说明任务。");
-  assert.equal(
-    await intake.handle("owner", "检查 README 并总结定位"),
-    "已接收 T0001：当前没有可用执行端，任务未执行。",
-  );
-  await store.updateTask("T0001", (task) => {
-    task.status = "succeeded";
-    task.execution = { startedAt: task.createdAt, finishedAt: task.updatedAt, sessionId: "session-1" };
+test("natural language is delegated as raw input and the Agent proposal is validated", async () => {
+  const fixture = await createIntake();
+  const calls: string[] = [];
+  const executor = planner((instruction) => {
+    calls.push(instruction);
+    return {
+      target: { name: "other-project", path: join(fixture.workspace, "other-project") },
+      mode: "read",
+      action: "检查 README 并总结定位",
+      readPaths: [join(fixture.workspace, "other-project")],
+      writePaths: [],
+    };
   });
-  await store.updateConversation("owner", (conversation) => { conversation.agentSessionId = "session-1"; });
-  await intake.handle("owner", "再看看测试覆盖情况");
-  const followUp = await store.get("T0002");
-  assert.equal(followUp?.project, "other-project");
-  assert.equal(followUp?.parentTaskId, "T0001");
-  assert.equal(followUp?.resumeSessionId, "session-1");
-});
-
-test("natural language defaults new requests to the control project and confirms cross-project writes", async () => {
-  const { intake, store } = await createIntake();
-  assert.equal(
-    await intake.handle("owner", "帮我总结项目"),
-    "已接收 T0001：当前没有可用执行端，任务未执行。",
+  const intake = new TaskIntake(
+    fixture.store,
+    fixture.workspace,
+    "wechat-agent-bot",
+    async () => "owner",
+    executor,
+    fixture.home,
   );
-  assert.equal((await store.get("T0001"))?.project, "wechat-agent-bot");
-  const response = await intake.handle("owner", "修改 other-project 的 README 标题");
-  assert.match(response, /等待二次确认：跨项目写入/);
-  assert.match(response, /系统理解：项目 other-project；模式 write/);
-  assert.equal((await store.get("T0002"))?.status, "awaiting_confirmation");
+  assert.equal(await intake.handle("owner", "请帮我看看 README 并总结定位"), "收到，正在生成回复中...");
+  assert.deepEqual(calls, ["请帮我看看 README 并总结定位"]);
+  assert.equal((await fixture.store.get("T0001"))?.project, "other-project");
+  assert.equal((await fixture.store.get("T0001"))?.mode, "read");
 });
 
-test("natural language low-risk writes in the control project run without confirmation", async () => {
-  const { intake, store } = await createIntake();
-  const response = await intake.handle("owner", "把待办想法记录到对应文档");
-  assert.equal(response, "已接收 T0001：当前没有可用执行端，任务未执行。");
+test("natural language uses the Agent proposal for a cross-project confirmation", async () => {
+  const { intake, store } = await createIntake(planner((instruction) => ({
+    target: { name: "other-project", path: instruction.includes("标题") ? "" : "" },
+    mode: "write",
+    action: instruction,
+    readPaths: [],
+    writePaths: [],
+  })));
+  // A proposal with an invalid path is rejected by the Bot; it must not guess
+  // a project from the prose or silently widen the write scope.
+  const response = await intake.handle("owner", "修改 other-project 的 README 标题");
+  assert.match(response, /Agent 返回的执行计划未通过安全校验/);
+  assert.equal((await store.get("T0001"))?.status, "failed");
+});
+
+test("natural language low-risk writes execute only after an Agent plan", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wechat-agent-planner-"));
+  const workspace = join(root, "workspace");
+  const home = join(root, "home");
+  const control = join(workspace, "wechat-agent-bot");
+  await mkdir(control, { recursive: true });
+  await mkdir(home, { recursive: true });
+  const store = new TaskStore(join(root, "tasks.json"));
+  const executor: TaskExecutor = {
+    plan: async () => ({
+      target: { name: "wechat-agent-bot", path: control },
+      mode: "write",
+      action: "把待办想法记录到 ROADMAP.md",
+      readPaths: [control],
+      writePaths: [control],
+    }),
+    start: async () => "started",
+    cancel: async () => false,
+  };
+  const intake = new TaskIntake(store, workspace, "wechat-agent-bot", async () => "owner", executor, home);
+  assert.equal(await intake.handle("owner", "把待办想法记录到对应文档"), "收到，正在生成回复中...");
   assert.equal((await store.get("T0001"))?.mode, "write");
   assert.equal((await store.get("T0001"))?.project, "wechat-agent-bot");
   assert.equal((await store.get("T0001"))?.confirmation, undefined);
@@ -236,87 +275,58 @@ test("conversation controls switch tasks, report status and start a new session"
   assert.equal(conversation?.agentSessionId, undefined);
 });
 
-test("an explicit project mention changes only this task target without starting a new agent session", async () => {
-  const { intake, store } = await createIntake();
-  await intake.handle("owner", "切换项目 wechat-agent-bot");
-  await store.updateConversation("owner", (conversation) => {
-    conversation.currentTaskId = "T0099";
-    conversation.agentSessionId = "session-1";
-  });
-  assert.equal(
-    await intake.handle("owner", "检查 other-project 的 README"),
-    "已接收 T0001：当前没有可用执行端，任务未执行。",
-  );
-  const task = await store.get("T0001");
-  assert.equal(task?.project, "other-project");
-  assert.equal(task?.mode, "read");
-  assert.equal(task?.parentTaskId, "T0099");
-  assert.equal(task?.resumeSessionId, "session-1");
-  assert.equal((await store.getConversation("owner"))?.defaultTargetProject, "wechat-agent-bot");
-  assert.equal((await store.getConversation("owner"))?.defaultTargetPinned, true);
-});
-
-test("current project reports the fixed control project and recent task target", async () => {
+test("current project stays the control project when a task names another target", async () => {
   const { intake } = await createIntake();
-  await intake.handle("owner", "检查 other-project 的 README");
   assert.equal(
     await intake.handle("owner", "当前项目是哪个项目啊？"),
-    "散帅，Agent 当前运行项目固定为 wechat-agent-bot；最近任务目标是 other-project。",
+    "散帅，Agent 当前运行项目固定为 wechat-agent-bot。",
   );
 });
 
-test("OpenClaw and explicit home paths become session-scoped read access", async () => {
-  const { home, intake, store } = await createIntake();
-  assert.equal(
-    await intake.handle("owner", "查看本机 OpenClaw 配置里有哪些任务"),
-    "已接收 T0001：当前没有可用执行端，任务未执行。",
-  );
-  const openclawPath = await realpath(join(home, ".openclaw"));
-  assert.equal((await store.get("T0001"))?.project, "~/.openclaw");
-  assert.deepEqual((await store.get("T0001"))?.authorizedReadPaths, [openclawPath]);
-  await store.updateConversation("owner", (conversation) => {
-    conversation.agentSessionId = "openclaw-session";
+test("local app discovery is delegated to the Agent and its paths are revalidated", async () => {
+  const fixture = await createIntake();
+  const executor = planner({
+    target: { name: "~/.qclaw", path: join(fixture.home, ".qclaw") },
+    mode: "read",
+    action: "查看 QClaw 配置和任务",
+    readPaths: [join(fixture.home, ".qclaw")],
+    writePaths: [],
   });
-
-  await intake.handle("owner", "这些任务分别是什么状态");
-  const followUp = await store.get("T0002");
-  assert.equal(followUp?.project, "wechat-agent-bot");
-  assert.deepEqual(followUp?.authorizedReadPaths, [
-    openclawPath,
-    await realpath(join(home, "..", "workspace", "wechat-agent-bot")),
-  ]);
-
-  await intake.handle("owner", "新会话");
-  assert.deepEqual((await store.getConversation("owner"))?.sessionReadPaths, []);
+  const intake = new TaskIntake(fixture.store, fixture.workspace, "wechat-agent-bot", async () => "owner", executor, fixture.home);
+  const { home, store } = fixture;
+  assert.equal(await intake.handle("owner", "查看 QClaw 专属配置和任务"), "收到，正在生成回复中...");
+  const task = await store.get("T0001");
+  assert.equal(task?.project, "~/.qclaw");
+  assert.deepEqual(task?.authorizedReadPaths, [await realpath(join(home, ".qclaw"))]);
 });
 
-test("local paths outside home and local writes are rejected", async () => {
-  const { home, intake, store } = await createIntake();
-  assert.match(await intake.handle("owner", "读取 /tmp 的内容"), /必须位于当前用户主目录内/);
-  assert.match(await intake.handle("owner", `读取 ${home} 的内容`), /不能把整个用户主目录作为读取范围/);
-  assert.equal(
-    await intake.handle("owner", `在 ${join(home, ".openclaw")} 创建 todo.md`),
-    "拒绝：工作区之外的本机路径只支持读取。",
-  );
-  assert.deepEqual((await store.load()).tasks, {});
+test("Agent plans outside the allowed workspace or home are rejected", async () => {
+  const { intake, store } = await createIntake(planner({
+    target: { name: "tmp", path: "/tmp" },
+    mode: "read",
+    action: "读取目录",
+    readPaths: ["/tmp"],
+    writePaths: [],
+  }));
+  const response = await intake.handle("owner", "读取 /tmp 的内容");
+  assert.match(response, /Agent 返回的执行计划未通过安全校验/);
+  assert.equal((await store.get("T0001"))?.status, "failed");
 });
 
-test("sensitive local read paths still require confirmation", async () => {
-  const { home, intake, store } = await createIntake();
-  const response = await intake.handle("owner", `检查 ${join(home, ".ssh")} 目录`);
+test("sensitive local read plans still require confirmation", async () => {
+  const fixture = await createIntake();
+  const executor = planner({
+    target: { name: "~/.ssh", path: join(fixture.home, ".ssh") },
+    mode: "read",
+    action: "检查目录",
+    readPaths: [join(fixture.home, ".ssh")],
+    writePaths: [],
+  });
+  const intake = new TaskIntake(fixture.store, fixture.workspace, "wechat-agent-bot", async () => "owner", executor, fixture.home);
+  const { home, store } = fixture;
+  const response = await intake.handle("owner", "检查本机密钥目录");
   assert.match(response, /等待二次确认：凭证、密钥或 \.env 操作/);
   assert.equal((await store.get("T0001"))?.status, "awaiting_confirmation");
-});
-
-test("an explicit cross-project write switches target but still requires confirmation", async () => {
-  const { intake, store } = await createIntake();
-  await intake.handle("owner", "切换项目 wechat-agent-bot");
-  const response = await intake.handle("owner", "修改 other-project 的 README 标题");
-  assert.match(response, /等待二次确认：跨项目写入/);
-  const task = await store.get("T0001");
-  assert.equal(task?.project, "other-project");
-  assert.equal(task?.status, "awaiting_confirmation");
-  assert.equal(task?.resumeSessionId, undefined);
 });
 
 test("store marks running and queued tasks interrupted after restart", async () => {

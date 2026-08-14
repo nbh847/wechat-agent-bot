@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
@@ -21,6 +22,7 @@ const runtimeDir = resolve("runtime-data/ilink");
 const statePath = resolve(runtimeDir, "state.json");
 const qrPath = resolve(runtimeDir, "login-qr.png");
 const taskStatePath = resolve("runtime-data/tasks/state.json");
+const workspacePath = resolve("..");
 const serviceRuntimeDir = resolve("runtime-data/service");
 const instanceLockPath = resolve(serviceRuntimeDir, "instance.lock");
 const healthPath = resolve(serviceRuntimeDir, "health.json");
@@ -76,11 +78,15 @@ const coordinator = agentExecutable
         },
       },
       serviceProjectPath,
+      10 * 60_000,
+      "configured-process-adapter",
+      2 * 60_000,
+      [workspacePath, homedir()],
     )
   : undefined;
 const intake = new TaskIntake(
   taskStore,
-  resolve(".."),
+  workspacePath,
   "wechat-agent-bot",
   async () => (await store.load()).credentials?.userId,
   coordinator,

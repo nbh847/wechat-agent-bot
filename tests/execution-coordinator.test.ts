@@ -12,7 +12,7 @@ import type { TaskRecord } from "../src/tasks/types.js";
 class FakeRunner implements AgentRunner {
   requests: AgentRunRequest[] = [];
   runImpl: (request: AgentRunRequest, signal: AbortSignal) => Promise<AgentRunResult> =
-    async () => ({ version: 1, status: "succeeded", summary: "done" });
+    async () => ({ version: 2, status: "succeeded", summary: "done" });
 
   run(request: AgentRunRequest, signal: AbortSignal): Promise<AgentRunResult> {
     this.requests.push(request);
@@ -84,6 +84,42 @@ test("runs one eligible task with project context and persists success", async (
   assert.equal(finished.length, 1);
 });
 
+test("analyzes raw user input without choosing a project in the Bot", async () => {
+  const { project, serviceProject, store, task } = await fixture("read", "planning");
+  task.instruction = "查看本机 QClaw 配置和任务";
+  task.resumeSessionId = "existing-read-session";
+  const runner = new FakeRunner();
+  runner.runImpl = async (request) => ({
+    version: 2,
+    status: "succeeded",
+    proposal: {
+      target: { name: "project", path: project },
+      mode: "read",
+      action: request.userInput,
+      readPaths: [project],
+      writePaths: [],
+    },
+  });
+  const coordinator = new ExecutionCoordinator(
+    store,
+    runner,
+    { onFinished: () => undefined },
+    serviceProject,
+    10 * 60_000,
+    "test-adapter",
+    2 * 60_000,
+    [project],
+  );
+  const proposal = await coordinator.plan(task);
+  assert.equal(proposal.target.path, project);
+  assert.equal(runner.requests[0].phase, "analyze");
+  assert.equal(runner.requests[0].targetProject, undefined);
+  assert.equal(runner.requests[0].cwd, serviceProject);
+  assert.equal(runner.requests[0].userInput, "查看本机 QClaw 配置和任务");
+  assert.equal(runner.requests[0].sessionId, "existing-read-session");
+  assert.deepEqual(runner.requests[0].access.writePaths, []);
+});
+
 test("does not start a second task while one is active", async () => {
   const first = await fixture();
   const second = await first.store.create((id, now) => ({
@@ -97,7 +133,7 @@ test("does not start a second task while one is active", async () => {
     ? new Promise((_resolve, reject) => {
         signal.addEventListener("abort", () => reject(signal.reason), { once: true });
       })
-    : Promise.resolve({ version: 1, status: "succeeded", summary: "done" });
+    : Promise.resolve({ version: 2, status: "succeeded", summary: "done" });
   const coordinator = new ExecutionCoordinator(first.store, runner, { onFinished: () => undefined }, first.serviceProject);
   assert.equal(await coordinator.start(first.task), "started");
   assert.equal(await coordinator.start(second), "queued");
@@ -128,7 +164,7 @@ test("queues only one task and resumes the same agent session", async () => {
   let release!: () => void;
   runner.runImpl = async (request) => {
     if (request.taskId === first.task.id) await new Promise<void>((resolve) => { release = resolve; });
-    return { version: 1, status: "succeeded", sessionId: request.sessionId ?? "session-1", summary: "done" };
+    return { version: 2, status: "succeeded", sessionId: request.sessionId ?? "session-1", summary: "done" };
   };
   const coordinator = new ExecutionCoordinator(first.store, runner, {
     onStarted: (task) => { started.push(task.id); },
@@ -171,7 +207,7 @@ test("marks timeout and failed protocol results", async () => {
 
   const failed = await fixture();
   const runner = new FakeRunner();
-  runner.runImpl = async () => ({ version: 1, status: "failed", error: "agent failure" });
+  runner.runImpl = async () => ({ version: 2, status: "failed", error: "agent failure" });
   new ExecutionCoordinator(failed.store, runner, { onFinished: () => undefined }, failed.serviceProject).start(failed.task);
   const result = await waitForFinish(failed.store, failed.task.id);
   assert.equal(result.status, "failed");
@@ -218,7 +254,7 @@ test("approved writes run from the target in an isolated non-persistent session"
   });
   task.resumeSessionId = "read-session";
   const runner = new FakeRunner();
-  runner.runImpl = async () => ({ version: 1, status: "succeeded", sessionId: "write-session", summary: "written" });
+  runner.runImpl = async () => ({ version: 2, status: "succeeded", sessionId: "write-session", summary: "written" });
   const coordinator = new ExecutionCoordinator(store, runner, { onFinished: () => undefined }, serviceProject);
   assert.equal(await coordinator.start(task), "started");
   assert.equal((await waitForFinish(store, task.id)).status, "succeeded");

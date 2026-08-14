@@ -103,7 +103,7 @@ export class TaskStore {
     const recovered: string[] = [];
     await this.update((state) => {
       for (const task of Object.values(state.tasks)) {
-        if (task.status !== "running" && task.status !== "queued") continue;
+        if (task.status !== "planning" && task.status !== "running" && task.status !== "queued") continue;
         task.status = "interrupted";
         task.updatedAt = new Date().toISOString();
         task.execution = {

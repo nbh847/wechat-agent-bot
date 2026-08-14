@@ -5,13 +5,15 @@ import { ProcessAgentRunner } from "../src/agent/process-runner.js";
 import type { AgentRunRequest } from "../src/agent/types.js";
 
 const request: AgentRunRequest = {
-  version: 1,
+  version: 2,
+  phase: "execute",
   taskId: "T0001",
   cwd: process.cwd(),
   controlProject: { name: "wechat-agent-bot", path: process.cwd() },
   targetProject: { name: "wechat-agent-bot", path: process.cwd() },
   mode: "read",
   instruction: "inspect",
+  userInput: "inspect",
   persistSession: true,
   requiredContextFiles: ["README.md"],
   access: { readPaths: [process.cwd()], writePaths: [] },
@@ -23,7 +25,7 @@ test("process runner exchanges one JSON request and result", async () => {
     "process.stdin.on('data', chunk => input += chunk);",
     "process.stdin.on('end', () => {",
     " const request = JSON.parse(input);",
-    " process.stdout.write(JSON.stringify({version: 1, status: 'succeeded', sessionId: request.taskId, summary: request.mode}));",
+    " process.stdout.write(JSON.stringify({version: 2, status: 'succeeded', sessionId: request.taskId, summary: request.mode}));",
     "});",
   ].join("\n");
   const result = await new ProcessAgentRunner(process.execPath, ["-e", script]).run(

@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import type { TaskStore } from "../tasks/store.js";
 import type { TaskExecutor } from "../tasks/intake.js";
-import type { TaskRecord } from "../tasks/types.js";
+import type { TaskProposal, TaskRecord } from "../tasks/types.js";
 import { AGENT_PROTOCOL_VERSION, type AgentRunner } from "./types.js";
 
 export interface ExecutionCallbacks {
@@ -14,6 +14,7 @@ export interface ExecutionCallbacks {
 
 export class ExecutionCoordinator implements TaskExecutor {
   private active?: { taskId: string; controller: AbortController };
+  private planning?: { taskId: string; controller: AbortController };
   private queued?: TaskRecord;
 
   constructor(
@@ -24,7 +25,43 @@ export class ExecutionCoordinator implements TaskExecutor {
     private readonly timeoutMs = 10 * 60_000,
     private readonly adapterId = "configured-process-adapter",
     private readonly progressIntervalMs = 2 * 60_000,
+    private readonly analysisReadPaths: string[] = [],
   ) {}
+
+  async plan(task: TaskRecord): Promise<TaskProposal> {
+    if (task.status !== "planning") throw new Error("任务当前不在 Agent 分析阶段");
+    if (this.active || this.queued || this.planning) throw new Error("执行端当前正忙，无法分析新任务");
+    const controller = new AbortController();
+    this.planning = { taskId: task.id, controller };
+    try {
+      const requiredContextFiles = await contextFiles(this.serviceProjectPath);
+      const conversation = await this.store.getConversation(task.senderId);
+      const result = await this.runner.run({
+        version: AGENT_PROTOCOL_VERSION,
+        phase: "analyze",
+        taskId: task.id,
+        cwd: this.serviceProjectPath,
+        controlProject: { name: "wechat-agent-bot", path: this.serviceProjectPath },
+        mode: "read",
+        instruction: task.instruction,
+        userInput: task.instruction,
+        context: conversationContext(conversation),
+        sessionId: task.resumeSessionId,
+        persistSession: false,
+        requiredContextFiles,
+        access: {
+          readPaths: [...new Set([this.serviceProjectPath, ...this.analysisReadPaths])],
+          writePaths: [],
+        },
+      }, controller.signal);
+      if (result.status !== "succeeded" || !result.proposal) {
+        throw new Error(result.error ?? "Agent 未返回结构化执行计划");
+      }
+      return result.proposal;
+    } finally {
+      this.planning = undefined;
+    }
+  }
 
   async start(task: TaskRecord): Promise<"started" | "queued" | "busy" | "rejected"> {
     if (!isExecutable(task)) return "rejected";
@@ -45,6 +82,18 @@ export class ExecutionCoordinator implements TaskExecutor {
   }
 
   async cancel(taskId: string): Promise<boolean> {
+    if (this.planning?.taskId === taskId) {
+      this.planning.controller.abort(new Error("任务已由用户取消"));
+      await this.store.updateTask(taskId, (task) => {
+        task.status = "cancelled";
+        task.execution = {
+          startedAt: task.createdAt,
+          finishedAt: new Date().toISOString(),
+          error: "任务已由用户取消",
+        };
+      });
+      return true;
+    }
     if (this.active?.taskId === taskId) {
       this.active.controller.abort(new Error("任务已由用户取消"));
       return true;
@@ -103,6 +152,7 @@ export class ExecutionCoordinator implements TaskExecutor {
         }
       }
       if (controller.signal.aborted) throw controller.signal.reason;
+      const conversation = await this.store.getConversation(task.senderId);
       const requiredContextFiles = [
         ...await contextFiles(this.serviceProjectPath),
         ...await contextFiles(task.projectPath),
@@ -110,12 +160,16 @@ export class ExecutionCoordinator implements TaskExecutor {
       if (controller.signal.aborted) throw controller.signal.reason;
       const result = await this.runner.run({
         version: AGENT_PROTOCOL_VERSION,
+        phase: "execute",
         taskId: task.id,
         cwd: task.mode === "write" ? task.projectPath : this.serviceProjectPath,
         controlProject: { name: "wechat-agent-bot", path: this.serviceProjectPath },
         targetProject: { name: task.project, path: task.projectPath },
         mode: task.mode,
         instruction: task.instruction,
+        userInput: task.instruction,
+        proposal: task.proposal,
+        context: conversationContext(conversation),
         sessionId: task.mode === "write" ? undefined : task.resumeSessionId,
         handoffSummary: task.handoffSummary,
         persistSession: task.mode === "read",
@@ -206,6 +260,23 @@ function safeError(error: unknown): string {
   if (error instanceof TimeoutError) return "Agent 执行超时";
   if (error instanceof Error) return error.message.slice(0, 500);
   return "Agent 执行失败";
+}
+
+function conversationContext(
+  conversation: Awaited<ReturnType<TaskStore["getConversation"]>>,
+): { defaultTargetProject?: { name: string; path: string }; currentTaskId?: string } | undefined {
+  if (!conversation) return undefined;
+  return {
+    defaultTargetProject: conversation.defaultTargetPinned
+      && conversation.defaultTargetProject
+      && conversation.defaultTargetProjectPath
+      ? {
+          name: conversation.defaultTargetProject,
+          path: conversation.defaultTargetProjectPath,
+        }
+      : undefined,
+    currentTaskId: conversation.currentTaskId,
+  };
 }
 
 export function formatExecutionResult(task: TaskRecord): string {

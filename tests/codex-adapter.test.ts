@@ -38,7 +38,7 @@ test("Codex adapter selects explicit sandbox and isolates write sessions", async
   await writeFile(fakeCodex, `#!/usr/bin/env node
 import { appendFileSync, writeFileSync } from "node:fs";
 const args = process.argv.slice(2);
-appendFileSync(process.env.CODEX_ARGS_LOG, JSON.stringify(args) + "\\n");
+appendFileSync(${JSON.stringify(argsLog)}, JSON.stringify(args) + "\\n");
 const output = args[args.indexOf("--output-last-message") + 1];
 writeFileSync(output, "ok");
 process.stdout.write(JSON.stringify({ type: "thread.started", thread_id: "read-session" }) + "\\n");
@@ -70,15 +70,46 @@ process.stdout.write(JSON.stringify({ type: "thread.started", thread_id: "read-s
   assert.deepEqual(calls[2].slice(-5), ["--sandbox", "workspace-write", "--cd", control, "-"]);
 });
 
+test("Codex adapter returns a structured plan during the analysis phase", async () => {
+  const fixture = await mkdtemp(join(tmpdir(), "codex-adapter-plan-"));
+  const fakeCodex = join(fixture, "codex");
+  const proposal = {
+    target: { name: "other-project", path: control },
+    mode: "read",
+    action: "检查项目并总结",
+    readPaths: [control],
+    writePaths: [],
+  };
+  await writeFile(fakeCodex, `#!/usr/bin/env node
+import { writeFileSync } from "node:fs";
+const args = process.argv.slice(2);
+const output = args[args.indexOf("--output-last-message") + 1];
+writeFileSync(output, ${JSON.stringify(JSON.stringify(proposal))});
+`);
+  await chmod(fakeCodex, 0o755);
+  const env = { ...process.env, PATH: `${fixture}:${process.env.PATH}` };
+  const result = await run({
+    ...baseRequest(),
+    phase: "analyze",
+    targetProject: undefined,
+    persistSession: false,
+    access: { readPaths: [control], writePaths: [] },
+  }, env);
+  assert.equal(result.status, "succeeded");
+  assert.deepEqual(result.proposal, proposal);
+});
+
 function baseRequest() {
   return {
-    version: 1,
+    version: 2,
+    phase: "execute",
     taskId: "T0001",
     cwd: control,
     controlProject: { name: "wechat-agent-bot", path: control },
     targetProject: { name: "wechat-agent-bot", path: control },
     mode: "read",
     instruction: "inspect",
+    userInput: "inspect",
     persistSession: true,
     requiredContextFiles: [],
     access: { readPaths: [control], writePaths: [] },
@@ -88,7 +119,7 @@ function baseRequest() {
 async function run(
   request: unknown,
   env = process.env,
-): Promise<{ status: string; error: string; sessionId?: string }> {
+): Promise<{ status: string; error: string; sessionId?: string; proposal?: unknown }> {
   const child = spawn(process.execPath, [adapter], { cwd: control, env, stdio: ["pipe", "pipe", "pipe"] });
   let stdout = "";
   child.stdout.setEncoding("utf8");

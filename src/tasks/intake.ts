@@ -1,10 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 import { homedir } from "node:os";
-import { join } from "node:path";
 
-import { confirmationReason, resolveLocalReadPath, resolveProject } from "./policy.js";
+import {
+  confirmationReason,
+  resolveProject,
+  validateTaskProposal,
+  type ResolvedProject,
+} from "./policy.js";
 import type { TaskStore } from "./store.js";
-import type { TaskMode, TaskRecord } from "./types.js";
+import type { TaskMode, TaskProposal, TaskRecord } from "./types.js";
 
 const HELP = [
   "指令格式：",
@@ -20,6 +24,7 @@ const AGENT_SESSION_TURN_LIMIT = 30;
 const SESSION_TIME_ZONE = "Asia/Shanghai";
 
 export interface TaskExecutor {
+  plan?(task: TaskRecord): Promise<TaskProposal>;
   start(task: TaskRecord): Promise<"started" | "queued" | "busy" | "rejected">;
   cancel(taskId: string): Promise<boolean>;
 }
@@ -75,7 +80,7 @@ export class TaskIntake {
     const conversation = await this.store.getConversation(senderId);
     const session = await this.sessionForNextTask(conversation, senderId);
     const authorizedReadPaths = mode === "read"
-      ? mergeReadPaths(session.resetReadPaths ? [] : conversation?.sessionReadPaths, [project.path])
+      ? mergeReadPaths(session.resetReadPaths ? [] : conversation?.sessionReadPaths, project.readPaths ?? [project.path])
       : [project.path];
     const code = reason ? randomBytes(3).toString("hex").toUpperCase() : undefined;
     const actionSummary = `${mode} ${project.name}: ${instruction}`;
@@ -104,7 +109,7 @@ export class TaskIntake {
       const outcome = this.executor ? await this.executor.start(task) : undefined;
       if (outcome === "busy") await this.markQueueFull(task.id);
       else if (outcome !== "rejected") await this.bindConversation(task);
-      return this.startResponse(task.id, outcome);
+      return this.startResponse(outcome);
     }
     await this.markPendingConversation(task);
     return [
@@ -277,98 +282,136 @@ export class TaskIntake {
     }
 
     const conversation = await this.store.getConversation(senderId);
-    const mode = inferMode(text);
-    const mentionedProjects = await this.findMentionedProjects(text);
-    if (mentionedProjects.length > 1) {
-      return `无法确定目标项目：${mentionedProjects.map((project) => project.name).join("、")}。请使用“切换项目 <project>”。`;
-    }
-    let localTarget;
-    try {
-      localTarget = await this.findLocalReadTarget(text);
-    } catch (error) {
-      return `拒绝：${(error as Error).message}。`;
-    }
-    if (localTarget && mentionedProjects.length > 0) {
-      return `无法确定目标：同时提到了项目 ${mentionedProjects[0].name} 和本机路径 ${localTarget.name}。`;
-    }
-    if (localTarget && mode === "write") {
-      return "拒绝：工作区之外的本机路径只支持读取。";
-    }
-    const project = localTarget ?? mentionedProjects[0] ?? (
-      conversation?.defaultTargetPinned && conversation.defaultTargetProject && conversation.defaultTargetProjectPath
-        ? { name: conversation.defaultTargetProject, path: conversation.defaultTargetProjectPath }
-        : await resolveProject(this.workspacePath, this.currentProject)
-    );
-    const parent = conversation?.currentTaskId;
+    const controlProject = await resolveProject(this.workspacePath, this.currentProject);
     const session = await this.sessionForNextTask(conversation, senderId);
-    const authorizedReadPaths = mode === "read"
-      ? mergeReadPaths(session.resetReadPaths ? [] : conversation?.sessionReadPaths, [project.path])
-      : [project.path];
     return this.createNaturalTask(
       senderId,
-      project,
-      mode,
+      controlProject,
       text,
-      parent,
+      conversation?.currentTaskId,
       session.sessionId,
       session.handoffSummary,
-      authorizedReadPaths,
+      session.resetReadPaths ? [] : conversation?.sessionReadPaths,
     );
   }
 
   private async createNaturalTask(
     senderId: string,
-    project: { name: string; path: string },
-    mode: TaskMode,
+    controlProject: ResolvedProject,
     instruction: string,
     parentTaskId?: string,
     resumeSessionId?: string,
     handoffSummary?: string,
-    authorizedReadPaths: string[] = [project.path],
+    sessionReadPaths?: string[],
   ): Promise<string> {
-    const reason = confirmationReason(project.name, this.currentProject, mode, instruction);
-    const code = reason ? randomBytes(3).toString("hex").toUpperCase() : undefined;
-    const actionSummary = `${mode} ${project.name}: ${instruction}`;
+    const initialActionSummary = `待 Agent 分析：${instruction}`;
     const task = await this.store.create((id, now) => ({
-      id, senderId, project: project.name, projectPath: project.path, authorizedReadPaths, mode,
-      instruction, actionSummary, parentTaskId, resumeSessionId, handoffSummary,
-      status: reason ? "awaiting_confirmation" : "received",
-      confirmation: reason && code ? {
-        codeHash: hashCode(id, actionSummary, code), reason, createdAt: now,
-      } : undefined,
+      id,
+      senderId,
+      project: controlProject.name,
+      projectPath: controlProject.path,
+      authorizedReadPaths: mergeReadPaths(sessionReadPaths, [controlProject.path]),
+      mode: "read",
+      instruction,
+      actionSummary: initialActionSummary,
+      parentTaskId,
+      resumeSessionId,
+      handoffSummary,
+      status: "planning",
       createdAt: now, updatedAt: now,
     }));
-    if (reason && code) {
-      await this.bindConversation(task);
+    await this.markPendingConversation(task);
+
+    if (!this.executor?.plan) {
+      await this.store.updateTask(task.id, (next) => {
+        next.status = "received";
+        next.actionSummary = `read ${controlProject.name}: ${instruction}`;
+      });
+      return this.startResponse(undefined);
+    }
+
+    let proposal: TaskProposal;
+    try {
+      proposal = await this.executor.plan(task);
+    } catch (error) {
+      const current = await this.store.get(task.id);
+      if (current?.status !== "cancelled") {
+        await this.store.updateTask(task.id, (next) => {
+          next.status = "failed";
+          next.execution = {
+            startedAt: next.createdAt,
+            finishedAt: new Date().toISOString(),
+            error: safeTaskError(error),
+          };
+        });
+      }
+      return "当前执行端无法分析这条任务，未执行。";
+    }
+
+    let validated;
+    try {
+      validated = await validateTaskProposal(
+        proposal,
+        this.workspacePath,
+        this.homePath,
+      );
+    } catch (error) {
+      await this.store.updateTask(task.id, (next) => {
+        next.status = "failed";
+        next.execution = {
+          startedAt: next.createdAt,
+          finishedAt: new Date().toISOString(),
+          error: safeTaskError(error),
+        };
+      });
+      return `Agent 返回的执行计划未通过安全校验：${safeTaskError(error)}。`;
+    }
+
+    const actionSummary = `${validated.mode} ${validated.project.name}: ${validated.instruction}`;
+    const reason = confirmationReason(
+      validated.project.name,
+      this.currentProject,
+      validated.mode,
+      `${validated.instruction}\n${validated.readPaths.join(" ")}`,
+    );
+    const code = reason ? randomBytes(3).toString("hex").toUpperCase() : undefined;
+    const planned = await this.store.updateTask(task.id, (next) => {
+      next.project = validated.project.name;
+      next.projectPath = validated.project.path;
+      next.authorizedReadPaths = validated.mode === "read"
+        ? mergeReadPaths(sessionReadPaths, validated.readPaths)
+        : [validated.project.path];
+      next.mode = validated.mode;
+      next.instruction = validated.instruction;
+      next.actionSummary = actionSummary;
+      next.proposal = {
+        target: validated.project,
+        mode: validated.mode,
+        action: validated.instruction,
+        readPaths: validated.readPaths,
+        writePaths: validated.writePaths,
+      };
+      next.status = reason ? "awaiting_confirmation" : "received";
+      next.confirmation = reason && code ? {
+        codeHash: hashCode(next.id, actionSummary, code), reason, createdAt: new Date().toISOString(),
+      } : undefined;
+    });
+    if (!planned) return "任务状态保存失败，未执行。";
+    if (reason) {
       return [
         `等待二次确认：${reason}。`,
-        `系统理解：项目 ${project.name}；模式 ${mode}；动作 ${instruction}`,
+        `系统理解：项目 ${planned.project}；模式 ${planned.mode}；动作 ${planned.instruction}`,
         "请回复“确认”或“拒绝”。",
       ].join("\n");
     }
-    const outcome = this.executor ? await this.executor.start(task) : undefined;
+
+    const outcome = await this.executor.start(planned);
     if (outcome === "busy") {
       await this.markQueueFull(task.id);
     } else if (outcome !== "rejected") {
-      await this.bindConversation(task);
+      await this.bindConversation(planned);
     }
-    return this.startResponse(task.id, outcome);
-  }
-
-  private async findMentionedProjects(text: string): Promise<Array<{ name: string; path: string }>> {
-    const { readdir } = await import("node:fs/promises");
-    const names = await readdir(this.workspacePath);
-    const matches = names.filter((name) => text.toLowerCase().includes(name.toLowerCase()));
-    return Promise.all(matches.map((name) => resolveProject(this.workspacePath, name)));
-  }
-
-  private async findLocalReadTarget(text: string): Promise<{ name: string; path: string } | undefined> {
-    const explicit = /(?:^|[\s（(])((?:~|～)\/[^\s，。；、）)]+|\/[^\s，。；、）)]+)/.exec(text)?.[1];
-    if (explicit) return resolveLocalReadPath(explicit, this.homePath);
-    if (/本机[^。；\n]*openclaw|openclaw[^。；\n]*(?:配置|任务|待办|计划)/i.test(text)) {
-      return resolveLocalReadPath(join(this.homePath, ".openclaw"), this.homePath);
-    }
-    return undefined;
+    return this.startResponse(outcome);
   }
 
   private async bindConversation(task: TaskRecord): Promise<void> {
@@ -414,23 +457,17 @@ export class TaskIntake {
     });
   }
 
-  private startResponse(id: string, outcome?: "started" | "queued" | "busy" | "rejected"): string {
+  private startResponse(outcome?: "started" | "queued" | "busy" | "rejected"): string {
     if (outcome === "started") return "收到，正在生成回复中...";
-    if (outcome === "queued") return `${id} 已接收并排队等待执行。`;
-    if (outcome === "busy") return `${id} 未执行：当前已有运行任务和一个排队任务。`;
-    return `已接收 ${id}：当前没有可用执行端，任务未执行。`;
+    if (outcome === "queued") return "已接收并排队等待执行。";
+    if (outcome === "busy") return "当前已有运行任务和一个排队任务，暂未执行。";
+    return "当前没有可用执行端，任务未执行。";
   }
 
   private async ownedTask(senderId: string, id: string): Promise<TaskRecord | undefined> {
     const task = await this.store.get(id);
     return task?.senderId === senderId ? task : undefined;
   }
-}
-
-function inferMode(text: string): TaskMode {
-  return /修改|新增|创建|写入|实现|修复|更新|编辑|记录|保存|补充|删除|安装|提交|commit|\b(?:write|edit|create|fix|update|delete|install|record|save)\b/i.test(text)
-    ? "write"
-    : "read";
 }
 
 function mergeReadPaths(existing: string[] | undefined, added: string[]): string[] {
@@ -474,4 +511,9 @@ function buildHandoffSummary(
 
 function hashCode(taskId: string, actionSummary: string, code: string): string {
   return createHash("sha256").update(`${taskId}\0${actionSummary}\0${code}`).digest("hex");
+}
+
+function safeTaskError(error: unknown): string {
+  if (error instanceof Error) return error.message.slice(0, 500);
+  return "Agent 计划失败";
 }
