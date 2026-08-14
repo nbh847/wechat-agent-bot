@@ -401,6 +401,8 @@ export class TaskIntake {
         mode: validated.mode,
         action: validated.instruction,
         sensitiveAccess: validated.sensitiveAccess,
+        sensitivePaths: validated.sensitivePaths,
+        sensitiveReason: validated.sensitiveReason,
         readPaths: validated.readPaths,
         writePaths: validated.writePaths,
       };

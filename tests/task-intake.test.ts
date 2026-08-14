@@ -325,6 +325,8 @@ test("sensitive local read plans still require confirmation", async () => {
     mode: "read",
     action: "检查目录",
     sensitiveAccess: true,
+    sensitivePaths: [join(fixture.home, ".ssh")],
+    sensitiveReason: "用户明确要求检查本机密钥目录",
     readPaths: [join(fixture.home, ".ssh")],
     writePaths: [],
   });
@@ -333,6 +335,24 @@ test("sensitive local read plans still require confirmation", async () => {
   const response = await intake.handle("owner", "检查本机密钥目录");
   assert.match(response, /等待二次确认：凭证、密钥或 \.env 操作/);
   assert.equal((await store.get("T0001"))?.status, "awaiting_confirmation");
+});
+
+test("vague sensitive claims without concrete evidence fail closed", async () => {
+  const fixture = await createIntake();
+  const executor = planner({
+    target: { name: "~/.qclaw", path: join(fixture.home, ".qclaw") },
+    mode: "read",
+    action: "读取 QClaw 配置和任务清单",
+    sensitiveAccess: true,
+    sensitivePaths: [join(fixture.home, ".qclaw")],
+    sensitiveReason: "配置目录可能包含敏感信息",
+    readPaths: [join(fixture.home, ".qclaw")],
+    writePaths: [],
+  });
+  const intake = new TaskIntake(fixture.store, fixture.workspace, "wechat-agent-bot", async () => "owner", executor, fixture.home);
+  const response = await intake.handle("owner", "查看本机 QClaw 的配置，看看里面有哪些任务");
+  assert.match(response, /敏感访问声明缺少可验证的敏感路径证据/);
+  assert.equal((await fixture.store.get("T0001"))?.status, "failed");
 });
 
 test("store marks running and queued tasks interrupted after restart", async () => {

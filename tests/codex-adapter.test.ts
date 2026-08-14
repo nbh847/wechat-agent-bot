@@ -78,6 +78,8 @@ test("Codex adapter returns a structured plan during the analysis phase", async 
     mode: "read",
     action: "检查项目并总结",
     sensitiveAccess: false,
+    sensitivePaths: [],
+    sensitiveReason: "",
     readPaths: [control],
     writePaths: [],
   };

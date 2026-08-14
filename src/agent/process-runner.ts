@@ -104,6 +104,9 @@ function isTaskProposal(value: unknown): boolean {
       && (proposal.mode === "read" || proposal.mode === "write")
       && typeof proposal.action === "string"
       && typeof proposal.sensitiveAccess === "boolean"
+      && Array.isArray(proposal.sensitivePaths)
+      && proposal.sensitivePaths.every((path) => typeof path === "string")
+      && typeof proposal.sensitiveReason === "string"
       && Array.isArray(proposal.readPaths)
       && Array.isArray(proposal.writePaths)
       && proposal.readPaths.every((path) => typeof path === "string")

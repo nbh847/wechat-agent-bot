@@ -26,7 +26,19 @@ npm run service:status
 
 `service:start` 会先构建项目，无需单独执行 `npm run build`。其他 Agent 可以执行上述启动命令；若要作为 Bot 的执行端，必须先实现并验证符合 `docs/architecture/agent-execution-protocol.md` 的适配器，再将其绝对路径传给 `WECHAT_AGENT_EXECUTABLE`。不得把普通 Agent CLI 路径直接当作适配器路径。
 
-健康状态为 `listening` 才表示微信长轮询已经启动。`service:start` 只在本机后台启动，不配置开机自启。
+健康状态为 `listening` 才表示微信长轮询已经启动。`service:start` 只在本机后台启动，不配置开机自启。`service:start` 不会先停止已有实例：当旧进程仍存活时，启动请求会被静默拒绝，状态和日志不会变化。需要重启服务时，必须先执行 `npm run service:stop`，确认状态为 `stopped` 后再执行 `service:start`。
+
+## 重启
+
+```bash
+cd /absolute/path/to/wechat-agent-bot
+npm run service:stop
+npm run service:status
+WECHAT_AGENT_EXECUTABLE="$PWD/scripts/claude-adapter.mjs" npm run service:start
+npm run service:status
+```
+
+先停止再启动；`WECHAT_AGENT_EXECUTABLE` 按“构建与启动”中的适配器表选择，示例为 Claude Code，切换执行端时只替换适配器路径。两次 `service:status` 分别确认旧实例已停止（`stopped`）和新实例已就绪（`listening`）。重启前处于 `running` 或 `queued` 的任务会标记为 `interrupted`，不会自动重跑。
 
 ## 停止
 
@@ -69,7 +81,7 @@ npm run service:status
 
 ### 第二个实例无法启动
 
-运行 `npm run service:status`。若原进程仍存活，停止重复启动；若进程已不存在，下一次启动会自动回收失效锁。
+运行 `npm run service:status`。若原进程仍存活且目的就是启动新实例，按“重启”先 `service:stop` 再 `service:start`；若只是误触发重复启动，无需处理。若进程已不存在，下一次启动会自动回收失效锁。
 
 ### 服务显示 `stopped`
 

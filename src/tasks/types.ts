@@ -26,6 +26,10 @@ export interface TaskProposal {
   mode: TaskMode;
   action: string;
   sensitiveAccess: boolean;
+  /** Concrete sensitive paths requested by the user; empty for ordinary configuration reads. */
+  sensitivePaths?: string[];
+  /** Why the user explicitly needs the sensitive contents; empty when sensitiveAccess is false. */
+  sensitiveReason?: string;
   readPaths: string[];
   writePaths: string[];
 }

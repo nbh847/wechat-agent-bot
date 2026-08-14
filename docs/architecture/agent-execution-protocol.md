@@ -24,12 +24,16 @@ Bot 把用户原话原样交给适配器，工作目录固定为 `wechat-agent-b
   "mode": "read",
   "action": "检查项目结构和测试覆盖并总结",
   "sensitiveAccess": false,
+  "sensitivePaths": [],
+  "sensitiveReason": "",
   "readPaths": ["/Users/your-name/workspace/repo-scout"],
   "writePaths": []
 }
 ```
 
 Bot 会重新解析路径、检查真实路径和符号链接、限制读写范围，并根据 `sensitiveAccess`、具体路径和写入风险决定是否需要二次确认，不从 Agent 的业务动作文本猜测敏感访问。计划无效、越界或无法落地时直接失败，不猜测、不补全。
+
+普通配置、任务清单和状态查询必须设置 `sensitiveAccess: false`、`sensitivePaths: []` 和空 `sensitiveReason`，并跳过目录中的敏感文件。只有用户明确要求读取具体 `.env`、凭据、密钥、token 或私钥内容时才能设置 `sensitiveAccess: true`；此时 `sensitivePaths` 必须列出位于读取范围内、名称可验证为敏感内容的真实绝对路径，`sensitiveReason` 必须说明用户的明确要求。仅因某个配置目录可能包含敏感文件而声明敏感访问，计划会被拒绝，不能进入确认态。
 
 ### 2. 执行阶段
 
@@ -94,6 +98,8 @@ Bot 会重新解析路径、检查真实路径和符号链接、限制读写范�
     "mode": "read",
     "action": "检查项目结构",
     "sensitiveAccess": false,
+    "sensitivePaths": [],
+    "sensitiveReason": "",
     "readPaths": ["/Users/your-name/workspace/repo-scout"],
     "writePaths": []
   }

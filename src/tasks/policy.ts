@@ -26,6 +26,8 @@ export interface ValidatedTaskProposal {
   mode: TaskMode;
   instruction: string;
   sensitiveAccess: boolean;
+  sensitivePaths: string[];
+  sensitiveReason: string;
   readPaths: string[];
   writePaths: string[];
 }
@@ -115,6 +117,7 @@ export async function validateTaskProposal(
   const readPaths = await resolvePlanPaths(proposal.readPaths, workspace, home);
   if (!readPaths.includes(target)) readPaths.push(target);
   const writePaths = await resolvePlanPaths(proposal.writePaths, workspace, home);
+  const sensitivePaths = await validateSensitiveEvidence(proposal, readPaths, workspace, home);
 
   if (proposal.mode === "read" && writePaths.length > 0) {
     throw new Error("只读 Agent 计划不能包含写入范围");
@@ -131,9 +134,41 @@ export async function validateTaskProposal(
     mode: proposal.mode,
     instruction: proposal.action.trim(),
     sensitiveAccess: proposal.sensitiveAccess,
+    sensitivePaths,
+    sensitiveReason: proposal.sensitiveReason?.trim() ?? "",
     readPaths,
     writePaths,
   };
+}
+
+async function validateSensitiveEvidence(
+  proposal: TaskProposal,
+  readPaths: string[],
+  workspace: string,
+  home: string,
+): Promise<string[]> {
+  const paths = proposal.sensitivePaths ?? [];
+  const reason = proposal.sensitiveReason?.trim() ?? "";
+  if (!proposal.sensitiveAccess) {
+    if (paths.length > 0 || reason) throw new Error("非敏感 Agent 计划不能携带敏感访问证据");
+    return [];
+  }
+  if (!reason || paths.length === 0) throw new Error("敏感 Agent 计划必须提供具体路径和访问理由");
+  const resolved = await Promise.all(paths.map(async (path) => {
+    if (!isAbsolute(path)) throw new Error("敏感访问证据必须使用绝对路径");
+    const actual = await realpath(path).catch(() => undefined);
+    if (!actual || (!isWithin(workspace, actual) && !isWithin(home, actual))) {
+      throw new Error("敏感访问证据路径不存在或越出允许范围");
+    }
+    if (!readPaths.some((allowed) => isWithin(allowed, actual))) {
+      throw new Error("敏感访问证据不在计划读取范围内");
+    }
+    if (!SENSITIVE_READ_PATTERNS.some(([pattern]) => pattern.test(actual))) {
+      throw new Error("敏感访问声明缺少可验证的敏感路径证据");
+    }
+    return actual;
+  }));
+  return [...new Set(resolved)];
 }
 
 export function proposalConfirmationReason(

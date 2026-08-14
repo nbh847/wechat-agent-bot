@@ -55,12 +55,11 @@ Goal 1 至 Goal 6 均已由散帅完成人工验收，MVP 已完成。Goal 7 正
 
 ## Goal 顺序
 
-1. Goal 1：正式化最小 iLink 文本通道。
-2. Goal 2：安全任务入口与确认协议。
-3. Goal 3：单 Agent 执行闭环。
-4. Goal 4：会话连续性与任务生命周期。
-5. Goal 5：本地常驻运行与故障恢复。
-6. Goal 6：MVP 端到端安全验收。
+1. Goal 1 至 Goal 6：MVP，均已完成人工验收；详细历史折叠保存在 `docs/plans/development-goals.md`。
+2. Goal 7：Agent 业务下沉与自然对话协议，当前进行中。
+3. Goal 8：定时提醒基础，待 Goal 7 验收后开始。
+4. Goal 9：定时 Agent 任务，待 Goal 8 验收后开始。
+5. Goal 10：混合任务与安全收尾，待 Goal 9 验收后开始。
 
 当前 Gate：Goal 7 进行中；完成自动化与真实微信验证后等待散帅人工验收。
 
@@ -115,3 +114,5 @@ Goal 1 至 Goal 6 均已由散帅完成人工验收，MVP 已完成。Goal 7 正
 - 2026-08-14：新增 Claude Code Agent v2 适配器，支持结构化分析、只读会话续接、写会话隔离、SIGTERM 取消和 JSON 结果回传；使用 Claude CLI 权限参数与 macOS `sandbox-exec` 限制文件访问。真实 Claude 无工具结构化输出、`npm run check`、67 个自动化／隔离测试、`npm audit`（0 vulnerabilities）和 `git diff --check` 已通过；散帅已授权将 `README.md`、`AGENTS.md` 和 `ROADMAP.md` 交给 Claude 验证，真实 Claude 已正确返回三份规则文件的只读结构化执行计划。
 - 2026-08-14：本地微信服务已从 Codex 适配器切换至 Claude Code 适配器并恢复 `listening`；真实微信执行回复和连续上下文仍待人工验收。
 - 2026-08-14：统一 README 与运行手册的 Agent-neutral 启动说明，明确“操作仓库的 Agent”与“Bot 执行端”可以不同；启动者统一选择已验证适配器并通过 `WECHAT_AGENT_EXECUTABLE` 启动，其他执行端必须先实现协议适配器。`AGENTS.md` 同步要求任何 Agent 在启动、停止、重启或排障前必读运行手册。
+- 2026-08-14：将已验收 Goal 1 至 Goal 6 在开发计划中折叠为历史归档，新增 Goal 8“定时提醒基础”、Goal 9“定时 Agent 任务”和 Goal 10“混合任务与安全收尾”；当前 Gate 仍为 Goal 7 人工验收，不提前实施定时能力。
+- 2026-08-14：收紧 Goal 7 的 Agent 敏感访问计划：普通配置与任务清单必须显式返回空敏感证据；只有用户明确请求具体敏感内容时才允许提供真实敏感路径和理由。Bot 对缺少具体证据或仅以“配置目录可能敏感”为理由的计划失败关闭，避免 Claude 将普通 QClaw 清单误送入确认态；`npm run check`、68 个自动化测试、`npm audit`（0 vulnerabilities）和 `git diff --check` 通过，Claude 服务已重启并恢复 `listening`。
