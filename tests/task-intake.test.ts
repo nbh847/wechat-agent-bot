@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, stat, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, stat, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -10,12 +10,15 @@ import { TaskStore } from "../src/tasks/store.js";
 async function createIntake() {
   const root = await mkdtemp(join(tmpdir(), "wechat-agent-tasks-"));
   const workspace = join(root, "workspace");
+  const home = join(root, "home");
   await mkdir(join(workspace, "wechat-agent-bot"), { recursive: true });
   await mkdir(join(workspace, "other-project"));
+  await mkdir(join(home, ".openclaw"), { recursive: true });
+  await mkdir(join(home, ".ssh"));
   const statePath = join(root, "runtime-data", "tasks.json");
   const store = new TaskStore(statePath);
-  const intake = new TaskIntake(store, workspace, "wechat-agent-bot", async () => "owner");
-  return { intake, statePath, store };
+  const intake = new TaskIntake(store, workspace, "wechat-agent-bot", async () => "owner", undefined, home);
+  return { home, intake, statePath, store };
 }
 
 test("rejects unauthorized senders without creating a task", async () => {
@@ -84,29 +87,28 @@ test("task records and status survive a store restart", async () => {
 test("cross-project writes require a task-bound one-time confirmation", async () => {
   const { intake, store } = await createIntake();
   const response = await intake.handle("owner", "task other-project write update README title");
-  assert.match(response, /T0001 等待二次确认：跨项目写入/);
-  const code = /confirm T0001 ([A-F0-9]{6})/.exec(response)?.[1];
-  assert.ok(code);
+  assert.match(response, /等待二次确认：跨项目写入/);
+  assert.doesNotMatch(response, /T0001|confirm|reject/);
   assert.equal((await store.get("T0001"))?.status, "awaiting_confirmation");
 
   assert.equal(await intake.handle("owner", "confirm T0001 000000"), "T0001 确认码不匹配。");
   assert.equal(
-    await intake.handle("owner", `confirm T0001 ${code}`),
-    "T0001 已确认授权；当前没有可用执行端，任务未执行。",
+    await intake.handle("owner", "确认"),
+    "已确认授权；当前没有可用执行端，任务未执行。",
   );
   assert.equal((await store.get("T0001"))?.status, "approved");
-  assert.equal(await intake.handle("owner", `confirm T0001 ${code}`), "T0001 当前不接受确认。");
+  assert.equal(await intake.handle("owner", "确认"), "当前没有待确认操作。");
 });
 
-test("a confirmation code cannot approve a different task or action", async () => {
+test("natural confirmation selects the current pending task without exposing ids", async () => {
   const { intake, store } = await createIntake();
   const first = await intake.handle("owner", "task other-project write update README title");
   const second = await intake.handle("owner", "task other-project write update ROADMAP status");
-  const firstCode = /confirm T0001 ([A-F0-9]{6})/.exec(first)?.[1];
-  assert.ok(firstCode);
-  assert.equal(await intake.handle("owner", `confirm T0002 ${firstCode}`), "T0002 确认码不匹配。");
-  assert.equal((await store.get("T0002"))?.status, "awaiting_confirmation");
-  assert.match(second, /confirm T0002 [A-F0-9]{6}/);
+  assert.doesNotMatch(first, /T0001|confirm T/);
+  assert.doesNotMatch(second, /T0002|confirm T/);
+  assert.equal(await intake.handle("owner", "确认"), "已确认授权；当前没有可用执行端，任务未执行。");
+  assert.equal((await store.get("T0001"))?.status, "awaiting_confirmation");
+  assert.equal((await store.get("T0002"))?.status, "approved");
 });
 
 test("high-risk operations require confirmation even in the current project", async () => {
@@ -147,9 +149,8 @@ test("read-only requests for credentials still require confirmation", async () =
 test("pending tasks can be rejected or cancelled", async () => {
   const { intake, store } = await createIntake();
   const first = await intake.handle("owner", "task other-project write change README");
-  const code = /reject T0001 ([A-F0-9]{6})/.exec(first)?.[1];
-  assert.ok(code);
-  assert.equal(await intake.handle("owner", `reject T0001 ${code}`), "T0001 已拒绝。");
+  assert.doesNotMatch(first, /T0001|reject T/);
+  assert.equal(await intake.handle("owner", "拒绝"), "已拒绝。");
   assert.equal((await store.get("T0001"))?.status, "rejected");
 
   await intake.handle("owner", "task other-project read inspect tests");
@@ -175,7 +176,7 @@ test("cancel delegates to an active executor before changing stored state", asyn
   );
   assert.equal(
     await intake.handle("owner", "task wechat-agent-bot read inspect README"),
-    "T0001 已接收并开始执行。",
+    "收到，正在生成回复中...",
   );
   assert.equal(await intake.handle("owner", "cancel T0001"), "T0001 正在取消。");
   assert.deepEqual(cancelled, ["T0001"]);
@@ -201,29 +202,33 @@ test("natural language uses the current project and continues the agent session"
   assert.equal(followUp?.resumeSessionId, "session-1");
 });
 
-test("natural language refuses an unknown project and confirms writes", async () => {
+test("natural language defaults new requests to the control project and confirms cross-project writes", async () => {
   const { intake, store } = await createIntake();
-  assert.match(await intake.handle("owner", "帮我总结项目"), /无法确定目标项目/);
-  assert.deepEqual((await store.load()).tasks, {});
+  assert.equal(
+    await intake.handle("owner", "帮我总结项目"),
+    "已接收 T0001：当前没有可用执行端，任务未执行。",
+  );
+  assert.equal((await store.get("T0001"))?.project, "wechat-agent-bot");
   const response = await intake.handle("owner", "修改 other-project 的 README 标题");
   assert.match(response, /等待二次确认：跨项目写入/);
   assert.match(response, /系统理解：项目 other-project；模式 write/);
-  assert.equal((await store.get("T0001"))?.status, "awaiting_confirmation");
+  assert.equal((await store.get("T0002"))?.status, "awaiting_confirmation");
 });
 
-test("natural language writes in the current project still require confirmation", async () => {
+test("natural language low-risk writes in the control project run without confirmation", async () => {
   const { intake, store } = await createIntake();
-  await intake.handle("owner", "切换项目 wechat-agent-bot");
-  const response = await intake.handle("owner", "修改 README 标题");
-  assert.match(response, /等待二次确认：口语化写入操作/);
-  assert.equal((await store.get("T0001"))?.status, "awaiting_confirmation");
+  const response = await intake.handle("owner", "把待办想法记录到对应文档");
+  assert.equal(response, "已接收 T0001：当前没有可用执行端，任务未执行。");
+  assert.equal((await store.get("T0001"))?.mode, "write");
+  assert.equal((await store.get("T0001"))?.project, "wechat-agent-bot");
+  assert.equal((await store.get("T0001"))?.confirmation, undefined);
 });
 
 test("conversation controls switch tasks, report status and start a new session", async () => {
   const { intake, store } = await createIntake();
   await intake.handle("owner", "task other-project read inspect README");
   assert.equal(await intake.handle("owner", "状态"), "T0001：received；read other-project: inspect README");
-  assert.equal(await intake.handle("owner", "继续 T0001"), "已切换到 T0001；默认目标项目：other-project。");
+  assert.equal(await intake.handle("owner", "继续 T0001"), "已切换到 T0001；任务目标：other-project。");
   assert.equal(await intake.handle("owner", "新任务"), "已开始新会话。请说明目标项目和任务。");
   const conversation = await store.getConversation("owner");
   assert.equal(conversation?.currentTaskId, undefined);
@@ -231,7 +236,7 @@ test("conversation controls switch tasks, report status and start a new session"
   assert.equal(conversation?.agentSessionId, undefined);
 });
 
-test("an explicit project mention changes the target without starting a new agent session", async () => {
+test("an explicit project mention changes only this task target without starting a new agent session", async () => {
   const { intake, store } = await createIntake();
   await intake.handle("owner", "切换项目 wechat-agent-bot");
   await store.updateConversation("owner", (conversation) => {
@@ -247,7 +252,60 @@ test("an explicit project mention changes the target without starting a new agen
   assert.equal(task?.mode, "read");
   assert.equal(task?.parentTaskId, "T0099");
   assert.equal(task?.resumeSessionId, "session-1");
-  assert.equal((await store.getConversation("owner"))?.defaultTargetProject, "other-project");
+  assert.equal((await store.getConversation("owner"))?.defaultTargetProject, "wechat-agent-bot");
+  assert.equal((await store.getConversation("owner"))?.defaultTargetPinned, true);
+});
+
+test("current project reports the fixed control project and recent task target", async () => {
+  const { intake } = await createIntake();
+  await intake.handle("owner", "检查 other-project 的 README");
+  assert.equal(
+    await intake.handle("owner", "当前项目是哪个项目啊？"),
+    "散帅，Agent 当前运行项目固定为 wechat-agent-bot；最近任务目标是 other-project。",
+  );
+});
+
+test("OpenClaw and explicit home paths become session-scoped read access", async () => {
+  const { home, intake, store } = await createIntake();
+  assert.equal(
+    await intake.handle("owner", "查看本机 OpenClaw 配置里有哪些任务"),
+    "已接收 T0001：当前没有可用执行端，任务未执行。",
+  );
+  const openclawPath = await realpath(join(home, ".openclaw"));
+  assert.equal((await store.get("T0001"))?.project, "~/.openclaw");
+  assert.deepEqual((await store.get("T0001"))?.authorizedReadPaths, [openclawPath]);
+  await store.updateConversation("owner", (conversation) => {
+    conversation.agentSessionId = "openclaw-session";
+  });
+
+  await intake.handle("owner", "这些任务分别是什么状态");
+  const followUp = await store.get("T0002");
+  assert.equal(followUp?.project, "wechat-agent-bot");
+  assert.deepEqual(followUp?.authorizedReadPaths, [
+    openclawPath,
+    await realpath(join(home, "..", "workspace", "wechat-agent-bot")),
+  ]);
+
+  await intake.handle("owner", "新会话");
+  assert.deepEqual((await store.getConversation("owner"))?.sessionReadPaths, []);
+});
+
+test("local paths outside home and local writes are rejected", async () => {
+  const { home, intake, store } = await createIntake();
+  assert.match(await intake.handle("owner", "读取 /tmp 的内容"), /必须位于当前用户主目录内/);
+  assert.match(await intake.handle("owner", `读取 ${home} 的内容`), /不能把整个用户主目录作为读取范围/);
+  assert.equal(
+    await intake.handle("owner", `在 ${join(home, ".openclaw")} 创建 todo.md`),
+    "拒绝：工作区之外的本机路径只支持读取。",
+  );
+  assert.deepEqual((await store.load()).tasks, {});
+});
+
+test("sensitive local read paths still require confirmation", async () => {
+  const { home, intake, store } = await createIntake();
+  const response = await intake.handle("owner", `检查 ${join(home, ".ssh")} 目录`);
+  assert.match(response, /等待二次确认：凭证、密钥或 \.env 操作/);
+  assert.equal((await store.get("T0001"))?.status, "awaiting_confirmation");
 });
 
 test("an explicit cross-project write switches target but still requires confirmation", async () => {
@@ -287,10 +345,12 @@ test("starts a fresh agent session on a new Shanghai date with a short handoff",
     conversation.agentSessionId = "old-session";
     conversation.agentSessionDate = "2000-01-01";
     conversation.agentTurnCount = 3;
+    conversation.sessionReadPaths = [join("unused", ".openclaw")];
   });
   await intake.handle("owner", "检查 other-project README");
   const task = await store.get("T0001");
   assert.equal(task?.resumeSessionId, undefined);
+  assert.deepEqual(task?.authorizedReadPaths, [task?.projectPath]);
   assert.match(task?.handoffSummary ?? "", /跨自然日/);
   assert.ok((task?.handoffSummary?.length ?? 0) <= 1_000);
 });
@@ -305,10 +365,12 @@ test("starts a fresh agent session after 30 turns but not when the target change
       timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
     }).format(new Date());
     conversation.agentTurnCount = 30;
+    conversation.sessionReadPaths = [join("unused", ".openclaw")];
   });
   await first.intake.handle("owner", "检查 other-project README");
   const rotated = await first.store.get("T0001");
   assert.equal(rotated?.resumeSessionId, undefined);
+  assert.deepEqual(rotated?.authorizedReadPaths, [rotated?.projectPath]);
   assert.match(rotated?.handoffSummary ?? "", /达到 30 轮/);
 
   const second = await createIntake();

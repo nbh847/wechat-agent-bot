@@ -17,6 +17,8 @@ export interface ConversationRecord {
   currentTaskId?: string;
   defaultTargetProject?: string;
   defaultTargetProjectPath?: string;
+  defaultTargetPinned?: boolean;
+  sessionReadPaths?: string[];
   adapterId?: string;
   agentSessionId?: string;
   agentSessionDate?: string;
@@ -29,6 +31,7 @@ export interface TaskRecord {
   senderId: string;
   project: string;
   projectPath: string;
+  authorizedReadPaths?: string[];
   mode: TaskMode;
   instruction: string;
   actionSummary: string;

@@ -57,14 +57,14 @@ const coordinator = agentExecutable
           await channel.queueReply(
             `execution-started:${task.id}`,
             task.senderId,
-            `${task.id} 已结束排队并开始执行。`,
+            "已开始生成回复。",
           );
         },
         onProgress: async (task) => {
           await channel.queueReply(
             `execution-progress:${task.id}:${Math.floor(Date.now() / 120_000)}`,
             task.senderId,
-            `${task.id} 仍在执行；可发送 status ${task.id} 查看状态，或 cancel ${task.id} 取消。`,
+            "仍在生成回复中；可发送“状态”查看，或“取消当前任务”取消。",
           );
         },
         onFinished: async (task) => {

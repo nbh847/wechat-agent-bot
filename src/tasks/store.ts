@@ -22,6 +22,8 @@ export class TaskStore {
       }>) {
         conversation.defaultTargetProject ??= conversation.currentProject;
         conversation.defaultTargetProjectPath ??= conversation.currentProjectPath;
+        conversation.defaultTargetPinned ??= false;
+        conversation.sessionReadPaths ??= [];
         delete conversation.currentProject;
         delete conversation.currentProjectPath;
       }
@@ -52,6 +54,12 @@ export class TaskStore {
 
   async get(id: string): Promise<TaskRecord | undefined> {
     return (await this.load()).tasks[id];
+  }
+
+  async pendingConfirmations(senderId: string): Promise<TaskRecord[]> {
+    return Object.values((await this.load()).tasks)
+      .filter((task) => task.senderId === senderId && task.status === "awaiting_confirmation")
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
   async updateTask(

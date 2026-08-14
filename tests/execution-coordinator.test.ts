@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { ExecutionCoordinator } from "../src/agent/coordinator.js";
+import { ExecutionCoordinator, formatExecutionResult } from "../src/agent/coordinator.js";
 import type { AgentRunner, AgentRunRequest, AgentRunResult } from "../src/agent/types.js";
 import { TaskStore } from "../src/tasks/store.js";
 import type { TaskRecord } from "../src/tasks/types.js";
@@ -229,6 +229,27 @@ test("approved writes run from the target in an isolated non-persistent session"
   assert.equal((await store.getConversation("owner"))?.agentSessionId, "read-session");
 });
 
+test("read execution preserves the explicit default target and forwards session read paths", async () => {
+  const { project, serviceProject, store, task } = await fixture();
+  const localPath = join(serviceProject, "local-read");
+  task.authorizedReadPaths = [project, localPath];
+  await store.updateConversation("owner", (conversation) => {
+    conversation.currentTaskId = task.id;
+    conversation.defaultTargetProject = "wechat-agent-bot";
+    conversation.defaultTargetProjectPath = serviceProject;
+    conversation.defaultTargetPinned = true;
+  });
+  const runner = new FakeRunner();
+  const coordinator = new ExecutionCoordinator(store, runner, { onFinished: () => undefined }, serviceProject);
+  await coordinator.start(task);
+  assert.equal((await waitForFinish(store, task.id)).status, "succeeded");
+  assert.deepEqual(runner.requests[0].access.readPaths, [serviceProject, project, localPath]);
+  const conversation = await store.getConversation("owner");
+  assert.equal(conversation?.defaultTargetProject, "wechat-agent-bot");
+  assert.equal(conversation?.defaultTargetPinned, true);
+  assert.deepEqual(conversation?.sessionReadPaths, [project, localPath]);
+});
+
 test("a result delivery failure does not rerun or change the completed task", async () => {
   const { serviceProject, store, task } = await fixture();
   const runner = new FakeRunner();
@@ -240,4 +261,13 @@ test("a result delivery failure does not rerun or change the completed task", as
   assert.equal(result.status, "succeeded");
   await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(runner.requests.length, 1);
+});
+
+test("successful replies omit internal task id and status", () => {
+  const task = {
+    id: "T0025",
+    status: "succeeded",
+    execution: { result: "散帅，可以实际使用。" },
+  } as TaskRecord;
+  assert.equal(formatExecutionResult(task), "散帅，可以实际使用。");
 });

@@ -1,6 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
-import { confirmationReason, resolveProject } from "./policy.js";
+import { confirmationReason, resolveLocalReadPath, resolveProject } from "./policy.js";
 import type { TaskStore } from "./store.js";
 import type { TaskMode, TaskRecord } from "./types.js";
 
@@ -9,6 +11,7 @@ const HELP = [
   "task <project> <read|write> <任务说明>",
   "status <task-id>",
   "cancel <task-id>",
+  "确认／拒绝",
   "confirm <task-id> <确认码>",
   "reject <task-id> <确认码>",
 ].join("\n");
@@ -28,6 +31,7 @@ export class TaskIntake {
     private readonly currentProject: string,
     private readonly authorizedSenderId: () => Promise<string | undefined>,
     private readonly executor?: TaskExecutor,
+    private readonly homePath = homedir(),
   ) {}
 
   async handle(senderId: string, input: string): Promise<string> {
@@ -35,6 +39,10 @@ export class TaskIntake {
     if (!authorized || senderId !== authorized) return "拒绝：当前微信用户未获得任务权限。";
 
     const text = input.trim();
+    const naturalDecision = /^(确认|拒绝)(?:\s+([\s\S]+))?$/.exec(text);
+    if (naturalDecision) {
+      return this.decidePending(senderId, naturalDecision[1] === "确认", naturalDecision[2]);
+    }
     const [command = ""] = text.split(/\s+/, 1);
     switch (command.toLowerCase()) {
       case "task":
@@ -66,6 +74,9 @@ export class TaskIntake {
     const reason = confirmationReason(project.name, this.currentProject, mode, instruction);
     const conversation = await this.store.getConversation(senderId);
     const session = await this.sessionForNextTask(conversation, senderId);
+    const authorizedReadPaths = mode === "read"
+      ? mergeReadPaths(session.resetReadPaths ? [] : conversation?.sessionReadPaths, [project.path])
+      : [project.path];
     const code = reason ? randomBytes(3).toString("hex").toUpperCase() : undefined;
     const actionSummary = `${mode} ${project.name}: ${instruction}`;
     const task = await this.store.create((id, now) => ({
@@ -73,6 +84,7 @@ export class TaskIntake {
       senderId,
       project: project.name,
       projectPath: project.path,
+      authorizedReadPaths,
       mode,
       instruction,
       actionSummary,
@@ -94,12 +106,12 @@ export class TaskIntake {
       else if (outcome !== "rejected") await this.bindConversation(task);
       return this.startResponse(task.id, outcome);
     }
+    await this.markPendingConversation(task);
     return [
-      `${task.id} 等待二次确认：${reason}。`,
+      `等待二次确认：${reason}。`,
       `目标：${task.project}`,
       `动作：${task.actionSummary}`,
-      `确认：confirm ${task.id} ${code}`,
-      `拒绝：reject ${task.id} ${code}`,
+      "请回复“确认”或“拒绝”。",
     ].join("\n");
   }
 
@@ -157,6 +169,48 @@ export class TaskIntake {
     return `${id} 已确认授权；当前没有可用执行端，任务未执行。`;
   }
 
+  private async decidePending(senderId: string, approve: boolean, descriptor?: string): Promise<string> {
+    const pending = await this.store.pendingConfirmations(senderId);
+    if (pending.length === 0) return "当前没有待确认操作。";
+    const conversation = await this.store.getConversation(senderId);
+    const current = conversation?.currentTaskId
+      ? pending.find((task) => task.id === conversation.currentTaskId)
+      : undefined;
+    let matches = descriptor
+      ? pending.filter((task) => matchesDescription(task, descriptor))
+      : [];
+    if (!descriptor && current) matches = [current];
+    if (!descriptor && !current && pending.length === 1) matches = pending;
+    if (descriptor && matches.length === 0 && current && /刚才|这个|该操作/.test(descriptor)) {
+      matches = [current];
+    }
+    if (matches.length !== 1) {
+      return [
+        matches.length > 1 ? "有多个操作符合你的描述：" : "当前有多个待确认操作：",
+        ...pending.map((task) => `- ${task.project}：${task.actionSummary}`),
+        "请说“确认 <项目或动作关键词>”或“拒绝 <项目或动作关键词>”。",
+      ].join("\n");
+    }
+    return this.decideTask(senderId, matches[0], approve);
+  }
+
+  private async decideTask(senderId: string, task: TaskRecord, approve: boolean): Promise<string> {
+    await this.store.updateTask(task.id, (next) => {
+      next.status = approve ? "approved" : "rejected";
+      next.confirmation = undefined;
+    });
+    if (!approve) return "已拒绝。";
+    const approved = await this.store.get(task.id);
+    if (!approved) return "未找到待确认操作。";
+    const outcome = this.executor ? await this.executor.start(approved) : undefined;
+    if (outcome === "busy") await this.markQueueFull(task.id);
+    else if (outcome !== "rejected") await this.bindConversation(approved);
+    if (outcome === "started") return "已确认授权，正在生成回复。";
+    if (outcome === "queued") return "已确认授权，正在排队等待执行。";
+    if (outcome === "busy") return "已确认授权，但当前执行队列已满。";
+    return "已确认授权；当前没有可用执行端，任务未执行。";
+  }
+
   private async naturalLanguage(senderId: string, text: string): Promise<string> {
     if (!text) return HELP;
     if (/^(?:状态|status)$/i.test(text)) {
@@ -171,11 +225,22 @@ export class TaskIntake {
         ? this.cancel(senderId, `cancel ${conversation.currentTaskId}`)
         : "当前没有任务。";
     }
+    if (/当前项目/i.test(text) && /哪个|什么|哪里|当前项目[呢啊?？]*$/i.test(text)) {
+      const conversation = await this.store.getConversation(senderId);
+      const current = conversation?.currentTaskId
+        ? await this.ownedTask(senderId, conversation.currentTaskId)
+        : undefined;
+      return current && current.project !== this.currentProject
+        ? `散帅，Agent 当前运行项目固定为 ${this.currentProject}；最近任务目标是 ${current.project}。`
+        : `散帅，Agent 当前运行项目固定为 ${this.currentProject}。`;
+    }
     if (/^(?:新任务|新会话|new session)$/i.test(text)) {
       await this.store.updateConversation(senderId, (conversation) => {
         conversation.currentTaskId = undefined;
         conversation.defaultTargetProject = undefined;
         conversation.defaultTargetProjectPath = undefined;
+        conversation.defaultTargetPinned = false;
+        conversation.sessionReadPaths = [];
         conversation.agentSessionId = undefined;
         conversation.agentSessionDate = undefined;
         conversation.agentTurnCount = 0;
@@ -188,11 +253,10 @@ export class TaskIntake {
       if (!task) return "未找到对应任务。";
       await this.store.updateConversation(senderId, (conversation) => {
         conversation.currentTaskId = task.id;
-        conversation.defaultTargetProject = task.project;
-        conversation.defaultTargetProjectPath = task.projectPath;
         conversation.agentSessionId = task.execution?.sessionId;
+        conversation.sessionReadPaths = task.authorizedReadPaths ?? [task.projectPath];
       });
-      return `已切换到 ${task.id}；默认目标项目：${task.project}。`;
+      return `已切换到 ${task.id}；任务目标：${task.project}。`;
     }
     const switchMatch = /^(?:切换项目|switch project)\s+(\S+)$/i.exec(text);
     if (switchMatch) {
@@ -202,7 +266,9 @@ export class TaskIntake {
           conversation.currentTaskId = undefined;
           conversation.defaultTargetProject = project.name;
           conversation.defaultTargetProjectPath = project.path;
+          conversation.defaultTargetPinned = true;
           conversation.agentSessionId = undefined;
+          conversation.sessionReadPaths = [];
         });
         return `已设置默认目标项目：${project.name}。请继续说明任务。`;
       } catch (error) {
@@ -211,21 +277,33 @@ export class TaskIntake {
     }
 
     const conversation = await this.store.getConversation(senderId);
+    const mode = inferMode(text);
     const mentionedProjects = await this.findMentionedProjects(text);
     if (mentionedProjects.length > 1) {
       return `无法确定目标项目：${mentionedProjects.map((project) => project.name).join("、")}。请使用“切换项目 <project>”。`;
     }
-    const project = mentionedProjects[0] ?? (
-      conversation?.defaultTargetProject && conversation.defaultTargetProjectPath
-        ? { name: conversation.defaultTargetProject, path: conversation.defaultTargetProjectPath }
-        : undefined
-    );
-    if (!project) {
-      return "无法确定目标项目。请说“切换项目 <project>”，或使用 task <project> <read|write> <任务说明>。";
+    let localTarget;
+    try {
+      localTarget = await this.findLocalReadTarget(text);
+    } catch (error) {
+      return `拒绝：${(error as Error).message}。`;
     }
-    const mode = inferMode(text);
+    if (localTarget && mentionedProjects.length > 0) {
+      return `无法确定目标：同时提到了项目 ${mentionedProjects[0].name} 和本机路径 ${localTarget.name}。`;
+    }
+    if (localTarget && mode === "write") {
+      return "拒绝：工作区之外的本机路径只支持读取。";
+    }
+    const project = localTarget ?? mentionedProjects[0] ?? (
+      conversation?.defaultTargetPinned && conversation.defaultTargetProject && conversation.defaultTargetProjectPath
+        ? { name: conversation.defaultTargetProject, path: conversation.defaultTargetProjectPath }
+        : await resolveProject(this.workspacePath, this.currentProject)
+    );
     const parent = conversation?.currentTaskId;
     const session = await this.sessionForNextTask(conversation, senderId);
+    const authorizedReadPaths = mode === "read"
+      ? mergeReadPaths(session.resetReadPaths ? [] : conversation?.sessionReadPaths, [project.path])
+      : [project.path];
     return this.createNaturalTask(
       senderId,
       project,
@@ -234,6 +312,7 @@ export class TaskIntake {
       parent,
       session.sessionId,
       session.handoffSummary,
+      authorizedReadPaths,
     );
   }
 
@@ -245,13 +324,13 @@ export class TaskIntake {
     parentTaskId?: string,
     resumeSessionId?: string,
     handoffSummary?: string,
+    authorizedReadPaths: string[] = [project.path],
   ): Promise<string> {
-    const reason = confirmationReason(project.name, this.currentProject, mode, instruction)
-      ?? (mode === "write" ? "口语化写入操作" : undefined);
+    const reason = confirmationReason(project.name, this.currentProject, mode, instruction);
     const code = reason ? randomBytes(3).toString("hex").toUpperCase() : undefined;
     const actionSummary = `${mode} ${project.name}: ${instruction}`;
     const task = await this.store.create((id, now) => ({
-      id, senderId, project: project.name, projectPath: project.path, mode,
+      id, senderId, project: project.name, projectPath: project.path, authorizedReadPaths, mode,
       instruction, actionSummary, parentTaskId, resumeSessionId, handoffSummary,
       status: reason ? "awaiting_confirmation" : "received",
       confirmation: reason && code ? {
@@ -262,10 +341,9 @@ export class TaskIntake {
     if (reason && code) {
       await this.bindConversation(task);
       return [
-        `${task.id} 等待二次确认：${reason}。`,
+        `等待二次确认：${reason}。`,
         `系统理解：项目 ${project.name}；模式 ${mode}；动作 ${instruction}`,
-        `确认：confirm ${task.id} ${code}`,
-        `拒绝：reject ${task.id} ${code}`,
+        "请回复“确认”或“拒绝”。",
       ].join("\n");
     }
     const outcome = this.executor ? await this.executor.start(task) : undefined;
@@ -284,20 +362,34 @@ export class TaskIntake {
     return Promise.all(matches.map((name) => resolveProject(this.workspacePath, name)));
   }
 
+  private async findLocalReadTarget(text: string): Promise<{ name: string; path: string } | undefined> {
+    const explicit = /(?:^|[\s（(])((?:~|～)\/[^\s，。；、）)]+|\/[^\s，。；、）)]+)/.exec(text)?.[1];
+    if (explicit) return resolveLocalReadPath(explicit, this.homePath);
+    if (/本机[^。；\n]*openclaw|openclaw[^。；\n]*(?:配置|任务|待办|计划)/i.test(text)) {
+      return resolveLocalReadPath(join(this.homePath, ".openclaw"), this.homePath);
+    }
+    return undefined;
+  }
+
   private async bindConversation(task: TaskRecord): Promise<void> {
     await this.store.updateConversation(task.senderId, (conversation) => {
       conversation.currentTaskId = task.id;
-      conversation.defaultTargetProject = task.project;
-      conversation.defaultTargetProjectPath = task.projectPath;
       conversation.agentSessionId = task.resumeSessionId;
+      if (task.mode === "read") conversation.sessionReadPaths = task.authorizedReadPaths ?? [task.projectPath];
+    });
+  }
+
+  private async markPendingConversation(task: TaskRecord): Promise<void> {
+    await this.store.updateConversation(task.senderId, (conversation) => {
+      conversation.currentTaskId = task.id;
     });
   }
 
   private async sessionForNextTask(
     conversation: Awaited<ReturnType<TaskStore["getConversation"]>>,
     senderId: string,
-  ): Promise<{ sessionId?: string; handoffSummary?: string }> {
-    if (!conversation?.agentSessionId) return {};
+  ): Promise<{ sessionId?: string; handoffSummary?: string; resetReadPaths?: boolean }> {
+    if (!conversation?.agentSessionId) return { resetReadPaths: true };
     const expiredByDate = conversation.agentSessionDate !== undefined
       && conversation.agentSessionDate !== shanghaiDate();
     const expiredByTurns = (conversation.agentTurnCount ?? 0) >= AGENT_SESSION_TURN_LIMIT;
@@ -305,7 +397,10 @@ export class TaskIntake {
     const current = conversation.currentTaskId
       ? await this.ownedTask(senderId, conversation.currentTaskId)
       : undefined;
-    return { handoffSummary: buildHandoffSummary(conversation, current, expiredByDate ? "跨自然日" : "达到 30 轮") };
+    return {
+      handoffSummary: buildHandoffSummary(conversation, current, expiredByDate ? "跨自然日" : "达到 30 轮"),
+      resetReadPaths: true,
+    };
   }
 
   private async markQueueFull(taskId: string): Promise<void> {
@@ -320,7 +415,7 @@ export class TaskIntake {
   }
 
   private startResponse(id: string, outcome?: "started" | "queued" | "busy" | "rejected"): string {
-    if (outcome === "started") return `${id} 已接收并开始执行。`;
+    if (outcome === "started") return "收到，正在生成回复中...";
     if (outcome === "queued") return `${id} 已接收并排队等待执行。`;
     if (outcome === "busy") return `${id} 未执行：当前已有运行任务和一个排队任务。`;
     return `已接收 ${id}：当前没有可用执行端，任务未执行。`;
@@ -333,9 +428,21 @@ export class TaskIntake {
 }
 
 function inferMode(text: string): TaskMode {
-  return /修改|新增|创建|写入|实现|修复|更新|编辑|删除|安装|提交|commit|\b(?:write|edit|create|fix|update|delete|install)\b/i.test(text)
+  return /修改|新增|创建|写入|实现|修复|更新|编辑|记录|保存|补充|删除|安装|提交|commit|\b(?:write|edit|create|fix|update|delete|install|record|save)\b/i.test(text)
     ? "write"
     : "read";
+}
+
+function mergeReadPaths(existing: string[] | undefined, added: string[]): string[] {
+  return [...new Set([...(existing ?? []), ...added])].slice(-10);
+}
+
+function matchesDescription(task: TaskRecord, descriptor: string): boolean {
+  const query = descriptor.replace(/刚才|这个|该操作/g, "").trim().toLowerCase();
+  if (!query) return false;
+  const haystack = `${task.project} ${task.actionSummary} ${task.instruction}`.toLowerCase();
+  return haystack.includes(query)
+    || query.split(/\s+/).filter(Boolean).every((token) => haystack.includes(token));
 }
 
 function shanghaiDate(date = new Date()): string {
@@ -354,8 +461,10 @@ function buildHandoffSummary(
 ): string {
   const lines = [
     `上下文轮换原因：${reason}。`,
-    "Agent 工作目录固定为 wechat-agent-bot；目标项目只是每轮动态访问范围。",
-    conversation.defaultTargetProject ? `默认目标项目：${conversation.defaultTargetProject}。` : "",
+    "Agent 控制项目固定为 wechat-agent-bot；只读任务从控制项目运行，已确认写任务临时从目标项目运行。",
+    conversation.defaultTargetPinned && conversation.defaultTargetProject
+      ? `显式默认目标项目：${conversation.defaultTargetProject}。`
+      : "",
     task ? `上一任务：${task.id}（${task.status}）${task.actionSummary}。` : "",
     task?.execution?.result ? `上一结果：${task.execution.result}` : "",
     "跨项目写入及红线操作仍须本轮独立确认，不得继承旧授权。",

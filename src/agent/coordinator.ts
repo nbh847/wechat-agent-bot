@@ -89,10 +89,11 @@ export class ExecutionCoordinator implements TaskExecutor {
         conversation.agentTurnCount = (conversation.agentTurnCount ?? 0) + 1;
         if (conversation.currentTaskId && conversation.currentTaskId !== task.id) return;
         conversation.currentTaskId = task.id;
-        conversation.defaultTargetProject = task.project;
-        conversation.defaultTargetProjectPath = task.projectPath;
         conversation.adapterId = this.adapterId;
         conversation.agentSessionId = task.resumeSessionId;
+        if (task.mode === "read") {
+          conversation.sessionReadPaths = task.authorizedReadPaths ?? [task.projectPath];
+        }
       });
       if (notifyStarted) {
         try {
@@ -120,7 +121,7 @@ export class ExecutionCoordinator implements TaskExecutor {
         persistSession: task.mode === "read",
         requiredContextFiles,
         access: {
-          readPaths: [this.serviceProjectPath, task.projectPath]
+          readPaths: [this.serviceProjectPath, ...(task.authorizedReadPaths ?? [task.projectPath])]
             .filter((path, index, paths) => paths.indexOf(path) === index),
           writePaths: task.mode === "write" ? [task.projectPath] : [],
         },
@@ -138,11 +139,10 @@ export class ExecutionCoordinator implements TaskExecutor {
       await this.store.updateConversation(task.senderId, (conversation) => {
         if (conversation.currentTaskId && conversation.currentTaskId !== task.id) return;
         conversation.currentTaskId = task.id;
-        conversation.defaultTargetProject = task.project;
-        conversation.defaultTargetProjectPath = task.projectPath;
         conversation.adapterId = this.adapterId;
         if (task.mode === "read") {
           conversation.agentSessionId = result.sessionId ?? task.resumeSessionId;
+          conversation.sessionReadPaths = task.authorizedReadPaths ?? [task.projectPath];
         }
         conversation.agentSessionDate = shanghaiDate();
       });
@@ -211,7 +211,7 @@ function safeError(error: unknown): string {
 export function formatExecutionResult(task: TaskRecord): string {
   const prefix = `${task.id} ${task.status}`;
   if (task.status === "succeeded") {
-    return `${prefix}：${truncate(task.execution?.result ?? "执行完成", 3_000)}`;
+    return truncate(task.execution?.result ?? "执行完成。", 3_000);
   }
   if (task.status === "cancelled") return `${prefix}：任务已取消。`;
   if (task.status === "timed_out") return `${prefix}：Agent 执行超时。`;

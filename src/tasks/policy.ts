@@ -1,10 +1,11 @@
 import { realpath, stat } from "node:fs/promises";
+import { homedir } from "node:os";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import type { TaskMode } from "./types.js";
 
 const SENSITIVE_READ_PATTERNS: Array<[RegExp, string]> = [
-  [/(?:^|\s|[/\\])\.env(?:$|\s|[/\\])|密钥|密码|secret|token/i, "凭证、密钥或 .env 操作"],
+  [/(?:^|\s|[/\\])(?:\.env|\.ssh|\.gnupg)(?:$|\s|[/\\])|凭证|密钥|私钥|密码|credential|secret|token/i, "凭证、密钥或 .env 操作"],
 ];
 
 const WRITE_RISK_PATTERNS: Array<[RegExp, string]> = [
@@ -17,6 +18,31 @@ const WRITE_RISK_PATTERNS: Array<[RegExp, string]> = [
 export interface ResolvedProject {
   name: string;
   path: string;
+}
+
+export async function resolveLocalReadPath(
+  pathInput: string,
+  homePath = homedir(),
+): Promise<ResolvedProject> {
+  const home = await realpath(homePath);
+  const normalized = pathInput.replace(/^～/, "~");
+  const candidate = normalized === "~"
+    ? home
+    : normalized.startsWith("~/")
+      ? resolve(home, normalized.slice(2))
+      : normalized;
+  if (!isAbsolute(candidate)) throw new Error("本机读取路径必须使用 ~/... 或绝对路径");
+  const actual = await realpath(candidate).catch(() => undefined);
+  if (!actual) throw new Error("本机读取路径不存在");
+  const relativePath = relative(home, actual);
+  if (!relativePath) throw new Error("不能把整个用户主目录作为读取范围，请指定具体子目录");
+  if (relativePath === ".." || relativePath.startsWith(`..${sep}`)) {
+    throw new Error("本机读取路径必须位于当前用户主目录内");
+  }
+  return {
+    name: relativePath ? `~/${relativePath}` : "~",
+    path: actual,
+  };
 }
 
 export async function resolveProject(
