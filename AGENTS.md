@@ -58,6 +58,18 @@
 - 常规只读 Git 可直接执行；删除、回滚、rebase、改历史、push、force-push、tag 和 release 必须先确认。
 - Commit 信息使用中文描述和 `init:`、`feat:`、`fix:`、`refactor:`、`docs:` 或 `chore:` 前缀，不添加 `Co-Authored-By`。
 
+## 已犯错误（禁止重犯）
+
+记录格式：
+
+```
+- **YYYY-MM-DD「错误名」**：发生了什么。以后如何避免。
+```
+
+- **2026-08-15「混淆本地 memory 与 Memex 入库」**：用户说「记一下入库到知识库」，我直接写到了本地 `.claude/projects/.../memory/`，没有按 Memex SOP 走完整流程。
+  - **原因**：混淆了「会话临时笔记」和「Memex 正式入库」两个概念。
+  - **以后**：用户说「入库到知识库」「Memex」时，必须先读 `Memex/docs/operations/ingestion-sop.md`，按候选创建 → 审核 → 批准 → 后处理的完整流程执行。本地 memory 只用于临时会话记录，不替代 Memex。
+
 ## 目录约定
 
 - `README.md`：稳定定位、边界和使用入口。

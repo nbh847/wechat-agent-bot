@@ -1,8 +1,12 @@
 # WeChat Agent Bot Workspace
 
-本仓库是 `wechat-acp` 启动本地 AI Agent 时使用的受控工作目录，不再维护自研微信 Bot、iLink 通道或 Agent 执行适配器。
+本仓库是散帅的**个人 AI 助手工作区**，用于替代 OpenClaw（小龙虾）作为本地 Agent 的统一入口和个人知识管理空间。
 
-微信通信和 ACP 会话由用户自行安装、运行的 `wechat-acp` 提供；Codex、Claude Code 或其他 ACP Agent 从本仓库目录启动，并遵守根目录规则文件。
+## 项目定位
+
+- **核心目标**：通过 `wechat-acp` 实现微信消息驱动的本地 AI Agent，将个人知识管理、待办事项、任务执行整合在一个受控工作区内。
+- **替代关系**：本仓库替代 OpenClaw（`~/.qclaw/`）成为主要工作空间；QClow 保留历史数据和部分技能，新活动逐步迁移到此。
+- **数据范围**：个人待做事项、观影清单、旅行目标、研究项目、项目进度、规则文件和必要调研资料。
 
 ## 工作方式
 
@@ -11,17 +15,35 @@
          ←           Agent 回复 ←
 ```
 
-本仓库只负责：
+本仓库负责：
 
 - 定义 Agent 在当前工作区内的行为、安全和确认规则。
+- 保存个人待做事项（待看清单、旅行目的地、研究项目等）。
 - 保存稳定项目说明、当前进度和必要调研资料。
 - 作为 `wechat-acp --cwd` 指向的默认工作目录。
 
 本仓库不负责：
 
-- 安装、升级或启动 `wechat-acp`。
+- 安装、升级或启动 `wechat-acp`（由散帅自行管理）。
 - 保存微信登录凭证、Agent token、密钥或 `.env`。
 - 实现微信协议、Agent 会话服务或权限代理。
+
+## 目录结构
+
+```
+wechat-agent-bot/
+├── README.md          # 本文件
+├── AGENTS.md          # 通用 Agent 规则
+├── CLAUDE.md          # Claude Code 入口规则
+├── ROADMAP.md         # 项目进度
+├── personal/          # 个人待做事项
+│   ├── reading/       # 待看清单（电影、动画）
+│   ├── destination/   # 旅行目的地
+│   └── research/      # 研究项目
+├── docs/
+│   └── research/      # 调研资料
+└── runtime-data/      # 本地运行数据（不进 Git）
+```
 
 ## Agent 入口
 
@@ -35,4 +57,8 @@
 
 这属于 Agent 行为约束，不是强制权限隔离。没有独立权限代理时，不得把 ACP 的自动批准视为散帅已经确认。
 
-历史微信接入调研保留在 [`docs/research/`](docs/research/) 。旧版自研 Bot 的完整代码和文档保存在 Git 分支 `archive/goal7-agent-v2-20260815`。
+## 历史与迁移
+
+- 历史微信接入调研保留在 [`docs/research/`](docs/research/)
+- 旧版自研 Bot 的完整代码和文档保存在 Git 分支 `archive/goal7-agent-v2-20260815`
+- OpenClaw（`~/.qclaw/`）中的个人数据（如 `second-brain/items/`）逐步迁移到本仓库的 `personal/` 目录
