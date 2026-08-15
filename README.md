@@ -40,6 +40,10 @@ wechat-agent-bot/
 │   ├── reading/       # 待看清单（电影、动画）
 │   ├── destination/   # 旅行目的地
 │   └── research/      # 研究项目
+├── scripts/
+│   └── cron-tasks/    # 定时任务（launchd + wechat-acp inject）
+│       ├── README.md  # 任务清单与约定
+│       └── launchd/   # plist 源文件（加载副本在 ~/Library/LaunchAgents/）
 ├── docs/
 │   └── research/      # 调研资料
 └── runtime-data/      # 本地运行数据（不进 Git）

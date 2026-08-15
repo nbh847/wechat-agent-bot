@@ -11,6 +11,8 @@
 - 明确新方向采用 `wechat-acp` 的 ACP 常驻会话，不再维护仓库内自研微信通道和 Agent 进程协议。
 - 完成 `main` 的规则重写与旧实现清理，只保留工作区规则、进度、许可证和历史调研资料。
 - 2026-08-15：更新 README.md 明确项目定位为个人 AI 助手工作区，替代 OpenClaw。
+- 2026-08-15：确认 `wechat-acp inject`（v0.10.0）支持本地消息注入，官方定位即 cron/launchd 场景；文件队列持久化，daemon 离线时消息排队等待补处理。
+- 2026-08-15：实现定时任务功能并端到端验证通过。4 个 QClow 任务迁移为 launchd + inject 方案：热点新闻 07:00、星球简报 07:30/14:30/18:30、AI 日报 08:30、智谱用量 09:00。wrapper 位于 `scripts/cron-tasks/`，plist 源文件同目录 `launchd/`，已加载到 `~/Library/LaunchAgents/`。验证方式：`launchctl start` 逐个手动触发，4 个任务 exit code 0，injection 全部进入 `done/` 队列（failed 为 0）。
 
 ## 进行中
 
@@ -24,6 +26,8 @@
 - 验证多轮上下文、取消、新会话、会话恢复和微信结果回传。
 - 设计并验证 ACP 权限请求到微信人工确认的强制权限代理。
 - **个人数据迁移**：将 QClow `second-brain/items/` 中的待做事项迁移到 `personal/` 目录。
+- **热点新闻 API Key**：`tencent-news-cli` 的 API Key 缺失（`cli-state.sh` 报 `missing`），当前任务会投递错误提示而非新闻；需散帅按 [SKILL.md](https://news.qq.com/exchange?scene=appkey) 流程配置后自愈。
+- **定时任务观察期**：2026-08-16 起观察各任务按调度自动触发是否正常（launchd 不补跑睡眠期间错过的任务）。
 
 ## 阻塞
 
@@ -31,6 +35,7 @@
 
 ## 最近验证
 
+- 2026-08-15：定时任务全链路验证通过——`launchctl start` 逐个触发 4 个任务（热点新闻、星球简报、AI 日报、智谱用量），全部 exit code 0；injection 队列 done 6 / failed 0，daemon 消费正常。期间发现并修复 launchd 无用户 PATH 导致 `env: node: No such file or directory` 的问题（wrapper 内显式 export nvm bin）。
 - 2026-08-15：盘点 `~/.qclaw/` 定时任务，记录落在 Git 忽略的 `runtime-data/qclaw-cron-jobs.md`（本地参考，不进 Git）；4 个启用任务（热点新闻、星球简报、AI 日报、智谱用量）经微信投递，调度疑似自 2026-08-13 上午停摆，根因未排查。
 - 2026-08-15：确认旧版 `main` 基线为 `fecd4db`，当前 9 个未提交进度文件已提交到归档分支，提交为 `183f9e4`。
 - 2026-08-15：完成根目录规则重写；删除旧源码、测试、依赖清单和过时架构／运维文档；移除可重新生成的 `dist/` 与 `node_modules/`。确认 `runtime-data/` 和 `.claude/settings.local.json` 保留，`git diff --check` 通过。
