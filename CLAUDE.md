@@ -1,12 +1,13 @@
-# WeChat Agent Bot Claude Code 规则
+# WeChat Agent Bot Workspace Claude Code 规则
 
-Claude Code 在本项目工作时，依次读取：
+Claude Code 在本仓库工作时依次读取：
 
 1. `README.md`
 2. 本文件
 3. `AGENTS.md`
 4. `ROADMAP.md`
+5. 与当前任务直接相关的 `docs/research/` 文档
 
-本项目的通用入口是 `README.md`，阶段、边界、文档结构、调研证据要求和安全约束统一以 `AGENTS.md` 与 `ROADMAP.md` 为准。Claude Code 不得建立专属工作流或绕过串行 Goal 和人工验收 Gate。
+`AGENTS.md` 是本仓库的通用规则源。本文件只负责 Claude Code 入口适配，不建立独立工作流，也不得降低通用安全边界。
 
-项目不绑定某一种 AI Agent。任何 Claude Code 专用适配都只能是未来可能的执行器适配之一，不得成为核心架构的默认前提。
+本仓库作为 `wechat-acp` 的目标工作目录时，Claude Agent 必须遵守 `AGENTS.md` 中的工作区边界和敏感操作确认规则。ACP 层自动批准权限不等于散帅确认；敏感工具调用必须在执行前通过当前对话取得一次性明确授权。
