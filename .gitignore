@@ -15,6 +15,9 @@ personal/
 # Scripts directory (personal, not for remote)
 scripts/
 
+# Research docs directory (personal, not for remote)
+docs/research/
+
 # Logs and process files
 *.log
 *.pid
