@@ -12,6 +12,9 @@ personal/
 *.pem
 *.key
 
+# Scripts directory (personal, not for remote)
+scripts/
+
 # Logs and process files
 *.log
 *.pid
