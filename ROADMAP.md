@@ -16,6 +16,7 @@
 - 2026-08-16：完成 workspace `second-brain/` 个人待办库向 `personal/` 的合并迁移并删除源目录。18 个重叠条目以 second-brain 富内容版为准合并（`destination/` 两个本就相同），4 个独有条目（潜水员戴夫、自主目标执行系统、私有知识库APP、Sublime弹窗屏蔽与引流）新增，`template.md` 一并保留；QClow 侧 `~/.qclaw/second-brain/items/` 已确认不存在。`WORKSPACE.md` 同步移除该项目的索引行和待补规范条目。
 - 2026-08-16：热点新闻 API Key 配置完成。散帅通过 `apikey-set` 将 `TENCENT_NEWS_APIKEY` 写入 `~/.zshrc`；`tencent-news-cli hot --limit 2` 在带环境变量、unset 环境变量、`env -i` 模拟 launchd 纯净环境三种条件下均正常返回，CLI 自身可从持久化配置读取 Key，不依赖 shell 环境，定时任务无需改动。
 - 2026-08-16：完成定时任务与 QClaw 的解耦——`brief.mjs` 迁入 `scripts/cron-tasks/` 并改引用共享 skill `~/.agents/skills/web-crawler/`；热点新闻 wrapper 跳过 skill 包装层直调 `~/.tencent-news-cli/bin/tencent-news-cli`（摘要截断逻辑内联）；全盘确认无运行时引用后删除 `~/.qclaw/skills/web-crawler/`（散帅授权）。迁移后 `brief.mjs` 与热点新闻 wrapper 均回归验证通过。
+- 2026-08-16：停用 OpenClaw/QClow 常驻服务——卸载并删除 `ai.openclaw.gateway.plist` LaunchAgent，`openclaw-gateway` 进程已停，`launchctl list` 无 openclaw 任务；删除 `~/.openclaw/logs/`（354M gateway 日志），保留 `state/`（SQLite cron 配置备查）与 `identity/`（设备认证）。`~/.qclow/` 目录已不存在（此前迁移轮已清理）。
 
 ## 进行中
 
