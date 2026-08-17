@@ -24,7 +24,7 @@
 
 本仓库不负责：
 
-- 安装、升级或启动 `wechat-acp`（由散帅自行管理）。
+- 捆绑或代管 `wechat-acp`；各机器按 `docs/deployment-*.md` 完成本地部署和运行管理。
 - 保存微信登录凭证、Agent token、密钥或 `.env`。
 - 实现微信协议、Agent 会话服务或权限代理。
 
@@ -45,7 +45,8 @@ wechat-agent-bot/
 │       ├── README.md  # 任务清单与约定
 │       └── launchd/   # plist 源文件（加载副本在 ~/Library/LaunchAgents/）
 ├── docs/
-│   └── research/      # 调研资料
+│   ├── deployment-windows.md  # Win10 + Claude 原生部署手册
+│   └── research/              # 调研资料
 └── runtime-data/      # 本地运行数据（不进 Git）
 ```
 
@@ -54,6 +55,7 @@ wechat-agent-bot/
 - Codex 读取 [`AGENTS.md`](AGENTS.md) 。
 - Claude Code 先读取 [`CLAUDE.md`](CLAUDE.md) ，再按其指引读取通用规则。
 - 当前阶段和明确待办以 [`ROADMAP.md`](ROADMAP.md) 为准。
+- Win10 使用 Claude 部署时读取 [`docs/deployment-windows.md`](docs/deployment-windows.md) 。
 
 ## 安全边界
 
