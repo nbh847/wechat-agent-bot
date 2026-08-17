@@ -18,11 +18,11 @@
 - 2026-08-16：完成定时任务与 QClaw 的解耦——`brief.mjs` 迁入 `scripts/cron-tasks/` 并改引用共享 skill `~/.agents/skills/web-crawler/`；热点新闻 wrapper 跳过 skill 包装层直调 `~/.tencent-news-cli/bin/tencent-news-cli`（摘要截断逻辑内联）；全盘确认无运行时引用后删除 `~/.qclaw/skills/web-crawler/`（散帅授权）。迁移后 `brief.mjs` 与热点新闻 wrapper 均回归验证通过。
 - 2026-08-16：停用 OpenClaw/QClow 常驻服务——卸载并删除 `ai.openclaw.gateway.plist` LaunchAgent，`openclaw-gateway` 进程已停，`launchctl list` 无 openclaw 任务；删除 `~/.openclaw/logs/`（354M gateway 日志），保留 `state/`（SQLite cron 配置备查）与 `identity/`（设备认证）。`~/.qclow/` 目录已不存在（此前迁移轮已清理）。
 - 2026-08-17：补齐 Win10 原生 Claude 部署手册 `docs/deployment-windows.md`，固定使用 `wechat-acp@0.10.0` 和官方 `claude` preset，覆盖前提检查、远程同步、扫码确认门禁、微信端验收、daemon 二次确认、停止与故障排查；文档明确不重装现有 Claude、不迁移 macOS 定时任务、不复制登录凭据。
+- 2026-08-17：完成 Win10 实机部署并通过全部验收。`wechat-acp@0.10.0` + `claude` preset + `--hide-thoughts`，前台扫码登录建立本机凭据后切换 daemon（PID 文件与日志在 `~/.wechat-acp/`）。微信端验收 4 条全过（工作目录、规则文件链、删除红线、一字不差回传），daemon 模式回传验收通过。过程沉淀三个解决方案：终端半块字符二维码渲染变形扫不出，转 BMP/PNG 图片扫码解决；后台任务孤儿进程与用户新进程双消费同一账号造成重复回复，`taskkill` 清理整棵进程树解决；确认进程存活须用 `tasklist`/`wmic` 而非 Git Bash `ps`（后者看不到完整命令行）。
 
 ## 进行中
 
-- 等待目标 Win10 机器按 `docs/deployment-windows.md` 完成 Claude 微信 Bot 实机部署和端到端验收。
-- 将 OpenClaw（`~/.qclaw/`）中的个人数据逐步迁移到本仓库 `personal/` 目录。
+- 将 OpenClaw（`~/.qclow/`）中的个人数据逐步迁移到本仓库 `personal/` 目录。
 
 ## 待办
 
@@ -37,6 +37,7 @@
 
 ## 最近验证
 
+- 2026-08-17：Win10 部署端到端验证通过——前提检查（Node 24.13.1 ≥ 22、Claude Code 2.1.177、适配器 0.69.0 与手册基线一致）；微信 4 条验收 + daemon 回传验收全部符合预期；`--hide-thoughts` 生效（微信端无思考转发，终端日志仍打印属正常设计）；单发单收确认无重复投递（此前"一条消息两条回复"实为手机端发出两条）。
 - 2026-08-17：Win10 部署文档静态核验——Claude 官方文档确认原生支持 Windows 10 1809+；`wechat-acp@0.10.0` 官方发布包确认 `claude` preset 启动 `@agentclientprotocol/claude-agent-acp`；npm 元数据确认当前 Claude ACP 适配器要求 Node.js ≥ 22。未在 Win10 实机执行，实机结果仍待验收。
 - 2026-08-16：解耦后回归验证——`brief.mjs`（指向共享 web-crawler）删除 qclaw 副本前后各跑一次均正常输出；热点新闻新 wrapper 投递成功（exit 0，injection 进入 done）；今早 09:00 智谱用量任务由 launchd 按调度自动触发并投递，调度链路无需人工干预。
 - 2026-08-16：second-brain 迁移完整性验证通过——24 个源文件与 `personal/` 合并结果逐个 `diff -q` 全部一致后，才执行 `rm -rf` 删除源目录；`personal/` 现有 26 个条目文件（含此前独有的 memory-bureau、shaolin-soccer、stormzhang-ai-daily）加 1 个模板。
