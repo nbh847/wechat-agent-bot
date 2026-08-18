@@ -36,3 +36,6 @@ npm-debug.log*
 # Test and coverage output
 coverage/
 .nyc_output/
+.claude/skills/deepseek-balance-first-reply/openclaw.json
+.claude/skills/email-fetch/.env
+.claude/skills/weread-skills/.token

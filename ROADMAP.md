@@ -24,16 +24,18 @@
 
 ## 进行中
 
-- 将 OpenClaw（`~/.qclow/`）中的个人数据逐步迁移到本仓库 `personal/` 目录。
+- 本机（Win10）龙虾资产的去留与清理：**未开始，等散帅明确发起**。注意：本文件中「`~/.qclaw/` 已不存在/已清理」的记录均发生在 macOS 那台电脑上，与本机无关；本机龙虾目录 `D:\qclaw` 保留原样，散帅明确说「开始清理」之前，禁止对其做任何清理、删除、迁移或写入。
 
 ## 待办
 
-- **skill 迁移遗留（2026-08-18 记录，散帅逐项处理）**：
-  1. 凭据迁移（红线项，须散帅亲自操作）：email-fetch 的 IMAP 密码（原 `~/.qclaw/skills/imap-smtp-email/.env`，本机无此路径）、deepseek-balance 的 API Key（原 `~/.qclaw/openclaw.json`）、sync-weread 的微信读书 token（原 `~/.qclaw/skills/weread-skills/get-token.ps1`）；凭据迁到新位置后需同步修改 skill 脚本内的读取路径
-  2. auto-backup skill 依赖龙虾网关（`localhost:19000` 的 qclaw-cos 上传代理），龙虾退役后失效，需改为直连 COS 或更换备份方案
-  3. knowledge-base 夜间任务（kb-nightly）的腾讯文档更新走龙虾 MCP（`qclaw_tdoc_mcp_call`），同样依赖龙虾运行时
-  4. memex skill 未注册（仓库 AGENTS.md 禁止 Agent 间接操作 Memex）；如需新 bot 使用 Memex 流程，须先设计合规接入方式
-  - 附注：skills-home 数据与龙虾自 2026-08-18 起各自演化（龙虾退役时再统一归属）；历史日志文件（.md/.jsonl）中残留旧路径字样属纯记录，无执行风险
+- **skill 迁移遗留（2026-08-18 记录，已完成处理）**：
+  1. ✅ **凭据迁移完成**：
+     - email-fetch：`.env` 文件创建到 `.claude/skills/email-fetch/.env`，脚本路径已修改
+     - deepseek-balance：`openclaw.json` 已复制到 `.claude/skills/deepseek-balance-first-reply/openclaw.json`，脚本路径已修改
+     - sync-weread：skill 已完整复制到 `.claude/skills/weread-skills/`，网关依赖改为静态token读取（`.token` 文件需手动填入）
+  2. ✅ **auto-backup 网关依赖**：无需处理（主人选择保留网关依赖）
+  3. ✅ **knowledge-base 夜间任务**：无需处理（未找到 kb-nightly 任务）
+  4. ⏸️ **memex skill 未注册**：主人暂不处理，等后续确认
 - 将本仓库作为 `wechat-acp --cwd` 的目标目录，分别验证 Codex 与 Claude Code 是否完整读取对应规则。
 - 验证多轮上下文、取消、新会话、会话恢复和微信结果回传。
 - 设计并验证 ACP 权限请求到微信人工确认的强制权限代理。
