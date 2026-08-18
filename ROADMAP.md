@@ -37,6 +37,7 @@
   2. ✅ **auto-backup 网关依赖**：无需处理（主人选择保留网关依赖）
   3. ✅ **knowledge-base 夜间任务**：无需处理（未找到 kb-nightly 任务）
   4. ⏸️ **memex skill 未注册**：主人暂不处理，等后续确认
+- **Win10 安装 CodeBuddy 并作为 wechat-acp Agent（待实机验收）**：部署文档 `docs/deployment-windows.md` 已补充「CodeBuddy 变体（Win10）」段（raw command `codebuddy --acp`、token 复用、与 Claude 切换先 `wechat-acp stop`），但 Win10 端尚未实机跑通，目前仅 macOS 端已完成端到端验收；Win10 实装并通过验收后再回填结论。
 - 将 OpenClaw（`~/.qclaw/`）中的个人数据逐步迁移到本仓库 `personal/` 目录。
 
 ## 最近验证

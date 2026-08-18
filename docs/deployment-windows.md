@@ -1,16 +1,38 @@
-# Win10 原生部署微信 Bot（Claude）
+# Win10 原生部署微信 Bot（Claude / CodeBuddy）
 
 ## 目标与边界
 
 本文供 Win10 上的 Agent 执行，将本仓库作为 `wechat-acp` 的工作目录，形成以下链路：
 
 ```text
-微信私聊 → wechat-acp → Claude ACP Agent → wechat-agent-bot 工作区
+微信私聊 → wechat-acp → Claude 或 CodeBuddy ACP Agent → wechat-agent-bot 工作区
 ```
 
 已知前提：目标 Win10 已安装 Claude Code。部署过程中只验证现有 Claude，不重新安装、不升级、不修改 Claude 配置。
 
 本文只部署基础微信 Bot，不迁移 macOS 的 `launchd` 定时任务，不配置 Windows 开机自启，不复制其他机器的微信登录凭据。
+
+## CodeBuddy 变体（Win10）
+
+除 Claude 外，Win10 也可使用 **CodeBuddy Code** 作为同一微信 Bot 的 ACP Agent。整体流程与本文 Claude 部署一致，差异如下，其余步骤（同步远程、验收、daemon、故障排查）沿用上文：
+
+- 前提：Win10 已安装 CodeBuddy（提供 `codebuddy` 命令且支持 `--acp`）。用 `codebuddy --version` 与 `codebuddy --help | findstr acp` 核验；若未安装或没有 `--acp`，只报告缺口，不擅自安装。
+- `wechat-acp@0.10.0` **没有内置 `codebuddy` preset**，必须用 raw command `--agent "codebuddy --acp"`，不要写 `--agent codebuddy`。
+- 规则读取：CodeBuddy 读取全局 `CODEBUDDY.md`（已内嵌本项目规则）与 `AGENTS.md`，无需 `CLAUDE.md`。
+- 登录 token 写在 `%USERPROFILE%\.wechat-acp`。若本机已用 Claude 部署过同一微信账号，token 可复用，无需重新扫码；但同一账号同一时间只能跑一个 `wechat-acp` daemon，从 Claude 切到 CodeBuddy 前必须先 `wechat-acp stop` 停掉旧 daemon，避免重复回复。
+- 启动命令（PowerShell，前台 / 后台二选一）：
+
+  ```powershell
+  $RepoRoot = "D:\workspace\wechat-agent-bot"
+  npx -y wechat-acp@0.10.0 --agent "codebuddy --acp" --cwd "$RepoRoot"
+  # 后台常驻：
+  npx -y wechat-acp@0.10.0 --agent "codebuddy --acp" --cwd "$RepoRoot" --daemon
+  ```
+
+- 验收同 macOS 4 条（见 `docs/deployment-macos.md` 第五步）：预期工作目录为 `D:\workspace\wechat-agent-bot`，规则链读 `AGENTS.md`「敏感操作确认」，删除红线不执行，指定句一字不差回传。
+- 已知限制（与 macOS 相同）：`_codebuddy.ai/command` ACP 方法未实现（slash 类扩展受限，核心收发正常）；多实例双消费。
+
+> 状态：此 Win10 + CodeBuddy 变体**尚未在 Win10 实机跑通**，目前仅 macOS 端已完成端到端验收（见 `ROADMAP.md`）。Win10 实装并通过验收后，再回填本段验收结论，不要提前写成已验证。
 
 ## Agent 执行规则
 
