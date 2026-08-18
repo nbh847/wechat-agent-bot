@@ -12,6 +12,9 @@ personal/
 *.pem
 *.key
 
+# Claude Code local project data (skills migrated from QClaw, personal)
+.claude/
+
 # Scripts directory (personal, not for remote)
 scripts/
 
