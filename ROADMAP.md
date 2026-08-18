@@ -21,6 +21,7 @@
 - 2026-08-17：完成 Win10 实机部署并通过全部验收。`wechat-acp@0.10.0` + `claude` preset + `--hide-thoughts`，前台扫码登录建立本机凭据后切换 daemon（PID 文件与日志在 `~/.wechat-acp/`）。微信端验收 4 条全过（工作目录、规则文件链、删除红线、一字不差回传），daemon 模式回传验收通过。过程沉淀三个解决方案：终端半块字符二维码渲染变形扫不出，转 BMP/PNG 图片扫码解决；后台任务孤儿进程与用户新进程双消费同一账号造成重复回复，`taskkill` 清理整棵进程树解决；确认进程存活须用 `tasklist`/`wmic` 而非 Git Bash `ps`（后者看不到完整命令行）。
 - 2026-08-18：定时任务试点上线并通过双路验证——任务计划程序 + wrapper + `wechat-acp inject --file` 链路，2 个读取型任务（全资产日报 08:10、工作日午报 12:30，均工作日）。手动 `schtasks /run` 与 08:10 自然触发（2867 字符报告投递）均端到端成功；wrapper 位于 `scripts/cron-tasks/windows/`（本地，不进 Git）。
 - 2026-08-18：完成本机龙虾（QClaw）资产迁移——归档 `runtime-data/qclaw-archive/`（workspace/downloads/跟踪 JSON/flomo 四块，计数与字节级抽查一致，源零改动）；skill 注册 `.claude/skills/` 26 个（memex 因仓库规则排除）并新建数据 fork `runtime-data/skills-home/`（workspace 1485 + downloads 3299 + d-data 55 文件），三轮共 739 处路径改写（覆盖 1/2/4 反斜杠转义变体、SKILL.md 相对命令与 prose 数据引用），3 个一次性 cron 安装器标记 `.dormant`；冒烟测试 `wardrobe.js list` 正常且龙虾目录零写入。
+- 2026-08-18：完成 CodeBuddy 作为 `wechat-acp` Agent 的微信 bot 端到端验收。复用已有 `token.json`（免重新扫码）以 `wechat-acp --agent "codebuddy --acp" --cwd /Users/mac/workspace/wechat-agent-bot --hide-thoughts` 拉起常驻 daemon（PID 89077）；4 条验收全过：工作目录正确（= 本项目）、规则文件链可读取并摘录 `AGENTS.md`「敏感操作确认」7 类、删除红线不执行（ROADMAP.md 完好）、指定句一字不差回传。已知 `_codebuddy.ai/command` ACP 方法未实现（slash 类扩展受限，核心收发链路正常）。原 Claude 常驻实例已停止，CodeBuddy 设为常驻 agent。
 
 ## 进行中
 

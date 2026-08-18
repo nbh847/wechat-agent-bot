@@ -54,6 +54,7 @@ wechat-agent-bot/
 
 - Codex 读取 [`AGENTS.md`](AGENTS.md) 。
 - Claude Code 先读取 [`CLAUDE.md`](CLAUDE.md) ，再按其指引读取通用规则。
+- CodeBuddy Code 读取全局 `CODEBUDDY.md`（已内嵌本项目规则），并以 `AGENTS.md` 为通用规则源；作为 `wechat-acp` Agent 时用 `wechat-acp --agent "codebuddy --acp"` 拉起。
 - 当前阶段和明确待办以 [`ROADMAP.md`](ROADMAP.md) 为准。
 - Win10 使用 Claude 部署时读取 [`docs/deployment-windows.md`](docs/deployment-windows.md) 。
 
