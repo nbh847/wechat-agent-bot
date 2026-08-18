@@ -23,6 +23,7 @@
 - 2026-08-18：完成本机龙虾（QClaw）资产迁移——归档 `runtime-data/qclaw-archive/`（workspace/downloads/跟踪 JSON/flomo 四块，计数与字节级抽查一致，源零改动）；skill 注册 `.claude/skills/` 26 个（memex 因仓库规则排除）并新建数据 fork `runtime-data/skills-home/`（workspace 1485 + downloads 3299 + d-data 55 文件），三轮共 739 处路径改写（覆盖 1/2/4 反斜杠转义变体、SKILL.md 相对命令与 prose 数据引用），3 个一次性 cron 安装器标记 `.dormant`；冒烟测试 `wardrobe.js list` 正常且龙虾目录零写入。
 - 2026-08-18：新增股价提示计划任务 `stock-alert`——周一至五 18:10，wrapper `scripts/cron-tasks/windows/stock-alert.{cmd,preamble.txt}`（本地，不进 Git）。链路：计划任务 → wrapper 跑统一脚本 `runtime-data/skills-home/workspace/scripts/stock-alert-monitor.cjs` → 输出 TRIGGER 开头才 `wechat-acp inject`（目标 `last-active-user`，不硬编码 --to），OK/ERROR 静默（副本留 `logs/` 待排查）。按散帅要求，把脚本里「港股账户腾讯:QQQ=50:50 动态再平衡」从未实现的「日度仅展示」补成触发提醒（>57% 卖腾讯买QQQ / <43% 卖QQQ买腾讯，死区±7%）。注册命令留档 `register-stock-alert.ps1`（PowerShell Register-ScheduledTask，schtasks 会被 auto-mode 分类器拦截）。手动触发端到端验证通过（TRIGGER 注入进 done、failed=0）。
 - 2026-08-18：新增日用品闲置检查计划任务 `stale-daily`——每月 28 日 20:00，wrapper `scripts/cron-tasks/windows/stale-daily.{cmd,preamble.txt}`（本地，不进 Git）。链路：计划任务 → wrapper 跑 `runtime-data/skills-home/workspace/scripts/stale-daily-check.cjs` → 输出 STALE 开头才 `wechat-acp inject` 通知主人列闲置清单并问是否处理（丢弃/送人/卖掉），OK/ERROR 静默（=NO_REPLY，副本留 `logs/stale-daily-last.out`）；不硬编码 --to，跟随 last-active-user。注册命令留档 `register-stale-daily.cmd`（`schtasks /Create /SC MONTHLY /D 28`，无 28 号的月份自动跳过，Git Bash 下需 `MSYS_NO_PATHCONV=1`）。已完成验证：OK 分支静默落盘、STALE 前缀 findstr 识别、计划任务注册成功、假 STALE 注入端到端投递微信。
+- 2026-08-18：完成 CodeBuddy 作为 `wechat-acp` Agent 的微信 bot 端到端验收。复用已有 `token.json`（免重新扫码）以 `wechat-acp --agent "codebuddy --acp" --cwd /Users/mac/workspace/wechat-agent-bot --hide-thoughts` 拉起常驻 daemon（PID 89077）；4 条验收全过：工作目录正确（= 本项目）、规则文件链可读取并摘录 `AGENTS.md`「敏感操作确认」7 类、删除红线不执行（ROADMAP.md 完好）、指定句一字不差回传。已知 `_codebuddy.ai/command` ACP 方法未实现（slash 类扩展受限，核心收发链路正常）。原 Claude 常驻实例已停止，CodeBuddy 设为常驻 agent；新增 `docs/deployment-macos.md` 记录 macOS 部署方式（raw command `codebuddy --acp`、token 复用、4 步验收与已知限制）。
 
 ## 进行中
 
@@ -38,6 +39,7 @@
   2. ✅ **auto-backup 网关依赖**：无需处理（主人选择保留网关依赖）
   3. ✅ **knowledge-base 夜间任务**：无需处理（未找到 kb-nightly 任务）
   4. ⏸️ **memex skill 未注册**：主人暂不处理，等后续确认
+- **Win10 安装 CodeBuddy 并作为 wechat-acp Agent（待实机验收）**：部署文档 `docs/deployment-windows.md` 已补充「CodeBuddy 变体（Win10）」段（raw command `codebuddy --acp`、token 复用、与 Claude 切换先 `wechat-acp stop`），但 Win10 端尚未实机跑通，目前仅 macOS 端已完成端到端验收；Win10 实装并通过验收后再回填结论。
 - 将 OpenClaw（`~/.qclaw/`）中的个人数据逐步迁移到本仓库 `personal/` 目录。
 
 ## 最近验证
