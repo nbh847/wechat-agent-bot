@@ -58,6 +58,7 @@
 - 密钥、token、密码和真实登录数据不得进入代码、日志或 Git。
 - 常规只读 Git 可直接执行；删除、回滚、rebase、改历史、push、force-push、tag 和 release 必须先确认。
 - Commit 信息使用中文描述和 `init:`、`feat:`、`fix:`、`refactor:`、`docs:` 或 `chore:` 前缀，不添加 `Co-Authored-By`。
+- **涉及第三方平台查询、统计或监控时，必须优先使用已存在的 skill**（如查询智谱额度用 `glm-stats`，查询 Codex 用量用 `manage-codex-usage`），不得自行解析原始数据或手动格式化输出。
 
 ## 已犯错误（禁止重犯）
 
