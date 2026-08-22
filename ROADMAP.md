@@ -44,6 +44,7 @@
 
 ## 最近验证
 
+- 2026-08-22：macOS 常驻 agent 从 CodeBuddy 切换为 Claude——先 `wechat-acp stop` 停止原 CodeBuddy daemon（PID 89077，`--agent "codebuddy --acp"`），确认退出后用内置 `claude` preset 重新启动后台 daemon（`wechat-acp@0.10.0 --agent claude --cwd .../wechat-agent-bot --daemon`，PID 85580）。复用已有 `token.json`（日志显示 `Loaded saved token`，免重新扫码），`status` 显示 Running，无 ACP 初始化错误，消息轮询正常。
 - 2026-08-18：定时任务自然触发验证——08:10 计划任务在调度器上下文自动执行，injection 入队、daemon 消费、Agent 产出 2867 字符资产报告并投递微信；skill 迁移冒烟测试——`wardrobe.js list` 从 skills-home 正常输出，测试期间 `D:\qclaw` 无任何文件写入。
 - 2026-08-17：Win10 部署端到端验证通过——前提检查（Node 24.13.1 ≥ 22、Claude Code 2.1.177、适配器 0.69.0 与手册基线一致）；微信 4 条验收 + daemon 回传验收全部符合预期；`--hide-thoughts` 生效（微信端无思考转发，终端日志仍打印属正常设计）；单发单收确认无重复投递（此前"一条消息两条回复"实为手机端发出两条）。
 - 2026-08-17：Win10 部署文档静态核验——Claude 官方文档确认原生支持 Windows 10 1809+；`wechat-acp@0.10.0` 官方发布包确认 `claude` preset 启动 `@agentclientprotocol/claude-agent-acp`；npm 元数据确认当前 Claude ACP 适配器要求 Node.js ≥ 22。未在 Win10 实机执行，实机结果仍待验收。

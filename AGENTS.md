@@ -59,6 +59,7 @@
 - 常规只读 Git 可直接执行；删除、回滚、rebase、改历史、push、force-push、tag 和 release 必须先确认。
 - Commit 信息使用中文描述和 `init:`、`feat:`、`fix:`、`refactor:`、`docs:` 或 `chore:` 前缀，不添加 `Co-Authored-By`。
 - **涉及第三方平台查询、统计或监控时，必须优先使用已存在的 skill**（如查询智谱额度用 `glm-stats`，查询 Codex 用量用 `manage-codex-usage`），不得自行解析原始数据或手动格式化输出。
+- 查询 / 整理 / 转发类任务只输出最终产物（如 `glm-stats` 模板卡片），不写开场白、过程叙述（`运行脚本`、`时间戳用代码计算` 等）和结尾的「说明 / 注记」段落；中间步骤一律不进回复。
 
 ## 已犯错误（禁止重犯）
 
