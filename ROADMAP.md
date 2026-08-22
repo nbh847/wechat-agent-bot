@@ -25,6 +25,8 @@
 - 2026-08-18：新增日用品闲置检查计划任务 `stale-daily`——每月 28 日 20:00，wrapper `scripts/cron-tasks/windows/stale-daily.{cmd,preamble.txt}`（本地，不进 Git）。链路：计划任务 → wrapper 跑 `runtime-data/skills-home/workspace/scripts/stale-daily-check.cjs` → 输出 STALE 开头才 `wechat-acp inject` 通知主人列闲置清单并问是否处理（丢弃/送人/卖掉），OK/ERROR 静默（=NO_REPLY，副本留 `logs/stale-daily-last.out`）；不硬编码 --to，跟随 last-active-user。注册命令留档 `register-stale-daily.cmd`（`schtasks /Create /SC MONTHLY /D 28`，无 28 号的月份自动跳过，Git Bash 下需 `MSYS_NO_PATHCONV=1`）。已完成验证：OK 分支静默落盘、STALE 前缀 findstr 识别、计划任务注册成功、假 STALE 注入端到端投递微信。
 - 2026-08-18：完成 CodeBuddy 作为 `wechat-acp` Agent 的微信 bot 端到端验收。复用已有 `token.json`（免重新扫码）以 `wechat-acp --agent "codebuddy --acp" --cwd /Users/mac/workspace/wechat-agent-bot --hide-thoughts` 拉起常驻 daemon（PID 89077）；4 条验收全过：工作目录正确（= 本项目）、规则文件链可读取并摘录 `AGENTS.md`「敏感操作确认」7 类、删除红线不执行（ROADMAP.md 完好）、指定句一字不差回传。已知 `_codebuddy.ai/command` ACP 方法未实现（slash 类扩展受限，核心收发链路正常）。原 Claude 常驻实例已停止，CodeBuddy 设为常驻 agent；新增 `docs/deployment-macos.md` 记录 macOS 部署方式（raw command `codebuddy --acp`、token 复用、4 步验收与已知限制）。
 
+- 2026-08-22：部署文档重组为按 Agent 分篇。将 `docs/deployment-macos.md` 与 `docs/deployment-windows.md` 内容重组为 `docs/deployments/codebuddy.md`（macOS/Win10 双节）、`docs/deployments/claude.md`（双节）与 `docs/deployments/codex.md`（占位待实机核验），统一章节模板便于未来复制新增 Agent；README 目录结构与 Agent 入口同步更新。旧 `deployment-*.md` 已在散帅明确确认后删除（`git rm`，历史保留可恢复）。同日按散帅实际用法把 `claude.md` macOS 节启动命令补正为 `npx -y wechat-acp@latest --agent claude --hide-thoughts --daemon`（不带 `--cwd`、前置 cd 到仓库根目录），锁版本 `@0.10.0` 写法保留为多机/生产备选。同日 CodeBuddy bot 曾用裸词 `--agent codebuddy` 启动，wechat-acp 把 `codebuddy` 当 raw command 运行、进入普通交互终端，ACP 握手失败致消息无反应（日志 `Failed to parse JSON message`）；改用正确 raw command `--agent "codebuddy --acp"` 后验证通过。`codebuddy.md` macOS 节命令按散帅实际用法同步为 `npx -y wechat-acp@latest --agent "codebuddy --acp" --hide-thoughts --daemon`（不带 `--cwd`、前置 cd 到仓库根目录），锁版本 `@0.10.0` 保留为多机/生产备选。
+
 ## 进行中
 
 - 本机（Win10）龙虾资产的去留与清理：**未开始，等散帅明确发起**。注意：本文件中「`~/.qclaw/` 已不存在/已清理」的记录均发生在 macOS 那台电脑上，与本机无关；本机龙虾目录 `D:\qclaw` 保留原样，散帅明确说「开始清理」之前，禁止对其做任何清理、删除、迁移或写入。
@@ -39,7 +41,7 @@
   2. ✅ **auto-backup 网关依赖**：无需处理（主人选择保留网关依赖）
   3. ✅ **knowledge-base 夜间任务**：无需处理（未找到 kb-nightly 任务）
   4. ⏸️ **memex skill 未注册**：主人暂不处理，等后续确认
-- **Win10 安装 CodeBuddy 并作为 wechat-acp Agent（待实机验收）**：部署文档 `docs/deployment-windows.md` 已补充「CodeBuddy 变体（Win10）」段（raw command `codebuddy --acp`、token 复用、与 Claude 切换先 `wechat-acp stop`），但 Win10 端尚未实机跑通，目前仅 macOS 端已完成端到端验收；Win10 实装并通过验收后再回填结论。
+- **Win10 安装 CodeBuddy 并作为 wechat-acp Agent（待实机验收）**：部署文档 `docs/deployments/codebuddy.md` 已含 Win10 节（raw command `codebuddy --acp`、token 复用、与 Claude 切换先 `wechat-acp stop`），但 Win10 端尚未实机跑通，目前仅 macOS 端已完成端到端验收；Win10 实装并通过验收后再回填结论。
 - 将 OpenClaw（`~/.qclaw/`）中的个人数据逐步迁移到本仓库 `personal/` 目录。
 
 ## 最近验证
