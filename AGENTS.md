@@ -7,10 +7,13 @@
 3. `ROADMAP.md`
 4. 与当前问题直接相关的 `docs/research/` 文档
 
+工作区级规则（含待办清单入口：个人待办队列为 `/Users/mac/workspace/TASKS.md` 等）见 `/Users/mac/workspace/AGENTS.md`，本项目不重复维护。
+
 ## 项目定位
 
 - 本仓库是 `wechat-acp` 启动 ACP Agent 时使用的默认工作目录。
 - 微信通信、会话恢复和 Agent 进程由外部 `wechat-acp` 提供，本仓库不再实现自研 Bot 服务。
+- 各 Agent（Claude / CodeBuddy / Codex）的 ACP 启动与部署方式，按篇维护在 `docs/deployments/`（`claude.md`、`codebuddy.md`、`codex.md`）；需要启动或部署时循此路径查阅对应文档，不在规则文件里重复命令。
 - 当前工作区的历史实现已归档到分支 `archive/goal7-agent-v2-20260815`，不得在 `main` 上恢复旧架构，除非散帅明确要求。
 - 默认中文沟通，每次回复先称呼用户为「散帅」。代码、命令、变量名、文件名和 URL 使用英文形式。
 
@@ -89,6 +92,7 @@
 - `CLAUDE.md`：Claude Code 入口，只负责引导到通用规则。
 - `ROADMAP.md`：当前阶段、已完成、待办、阻塞和最近验证。
 - `docs/research/`：带来源和核验日期的调研资料。
+- `docs/deployments/`：各 Agent（`claude.md` / `codebuddy.md` / `codex.md`）的 ACP 启动、部署与日常操作文档。
 - 新目录必须先在 `README.md` 中说明用途、命名和清理规则。
 
 ## Agent 功能开发规范
