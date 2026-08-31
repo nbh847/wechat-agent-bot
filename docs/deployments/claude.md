@@ -56,36 +56,33 @@ git log -1 --oneline --decorate
 
 通过标准：本地分支与 `origin/main` 一致，工作区干净。若仓库尚未克隆，先让散帅确认目标目录，再 `git clone`。
 
-### 3. 核验 wechat-acp CLI 与 Claude ACP 入口
+### 3. 核验本地修复构建与 Claude ACP 入口
 
 ```bash
-npx -y wechat-acp@0.10.0 --version
-npx -y wechat-acp@0.10.0 agents
+git -C runtime-data/vendor/wechat-acp rev-parse HEAD
+node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js --version
+node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js agents
+bash scripts/wechat-acp/verify-send-failure.sh
 ```
 
 通过标准：
 
-- 版本输出为 `0.10.0`。
+- 源码基线提交为项目启动脚本内固定的提交，版本输出为 `0.10.0`。
 - agent 列表包含 `claude`。
+- 隔离验证脚本全部通过；该脚本只使用 mock，不访问真实微信接口或凭据。
 
-若本机已全局安装 `wechat-acp`，也可直接 `wechat-acp` 或绝对路径 `/Users/mac/node_modules/.bin/wechat-acp` 代替 `npx -y wechat-acp@0.10.0`。
+macOS 修复上线后不得用 `npx`、`@latest` 或 `/Users/mac/node_modules/.bin/wechat-acp` 替代项目内构建，否则“发送失败假成功”缺陷会恢复。
 
 ### 4. 首次启动与登录
 
 执行前必须向散帅说明具体动作、影响范围、潜在风险与恢复方式，并取得一次性明确确认。确认后在仓库根目录执行。
 
-macOS 推荐的启动方式（散帅实际用法）：命令**不带 `--cwd`，依赖当前工作目录**，因此必须先 `cd` 到仓库根目录；`--hide-thoughts` 让 wechat-acp 不在微信端转发 Agent 的思考过程。
+首次登录需要前台运行时，直接使用已验证的项目内构建；`--hide-thoughts` 让 wechat-acp 不在微信端转发 Agent 的思考过程，发送审计写入项目忽略目录。
 
 ```bash
 cd /Users/mac/workspace/wechat-agent-bot
-npx -y wechat-acp@latest --agent claude --hide-thoughts
-```
-
-备选（锁版本 + 显式工作目录 + `--hide-thoughts`，适合需要固定版本的多机/生产环境）：
-
-```bash
-RepoRoot=$(pwd)
-npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --hide-thoughts
+export WECHAT_ACP_SEND_AUDIT_FILE=/Users/mac/workspace/wechat-agent-bot/runtime-data/send-audit/send-audit.jsonl
+node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js --agent claude --cwd /Users/mac/workspace/wechat-agent-bot --hide-thoughts
 ```
 
 随后：
@@ -130,20 +127,12 @@ npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --hide-thoughts
 
 基础验收通过后，`Ctrl+C` 停止前台进程。后台 daemon 属于常驻进程，启动前必须再次向散帅说明风险并取得一次性确认，随后执行。
 
-macOS 推荐的 daemon 启动（散帅实际命令；不带 `--cwd`，需先 `cd` 到仓库根目录；`--hide-thoughts` 不转发思考）：
+macOS daemon 只有一个启动入口；它会校验固定源码基线、构建指纹和版本，缺失或不匹配时直接失败，不回退到官方未修复包：
 
 ```bash
 cd /Users/mac/workspace/wechat-agent-bot
-npx -y wechat-acp@latest --agent claude --hide-thoughts --daemon
-npx -y wechat-acp status
-```
-
-备选（锁版本 + 显式工作目录 + `--hide-thoughts`，适合多机/生产）：
-
-```bash
-RepoRoot=$(pwd)
-npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --hide-thoughts --daemon
-npx -y wechat-acp status
+bash scripts/wechat-acp/start-claude-daemon.sh
+node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js status
 ```
 
 通过标准：`status` 显示 daemon 正在运行。随后再从微信发一条：
@@ -157,14 +146,15 @@ npx -y wechat-acp status
 ### 日常操作（macOS）
 
 ```bash
-npx -y wechat-acp status            # 查看状态
-npx -y wechat-acp stop              # 停止 daemon
+node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js status  # 查看状态
+node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js stop    # 停止 daemon
 ```
 
 强制重新扫码会替换登录状态，必须先取得散帅确认：
 
 ```bash
-npx -y wechat-acp@latest --agent claude --hide-thoughts --cwd /Users/mac/workspace/wechat-agent-bot --login
+export WECHAT_ACP_SEND_AUDIT_FILE=/Users/mac/workspace/wechat-agent-bot/runtime-data/send-audit/send-audit.jsonl
+node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js --agent claude --hide-thoughts --cwd /Users/mac/workspace/wechat-agent-bot --login
 ```
 
 不要在本文部署中创建 macOS 开机自启或 launchd 常驻项；启用系统常驻启动项属于系统配置变更，必须作为独立任务说明风险并取得确认。
@@ -172,13 +162,17 @@ npx -y wechat-acp@latest --agent claude --hide-thoughts --cwd /Users/mac/workspa
 ### 故障排查（macOS）
 
 - `claude` 命令不可用：仅执行 `claude --version` 收集非敏感摘要；不要重装 Claude，向散帅报告 PATH 或安装健康检查结果。
-- `wechat-acp` 不在 PATH：用 `npx -y wechat-acp@0.10.0 ...` 或绝对路径 `/Users/mac/node_modules/.bin/wechat-acp ...` 代替。
+- 本地修复构建缺失或校验失败：停止部署，运行 `bash scripts/wechat-acp/verify-send-failure.sh` 收集非敏感摘要；不得回退到 `npx` 或全局官方包后声称修复仍生效。
 - Node.js 版本不足：Claude ACP 适配器当前要求 Node.js ≥ 22；不要自行升级，报告当前版本并等待确认。
 - ACP session 创建失败：依次核对 `npx -y wechat-acp@0.10.0 agents` 是否包含 `claude`、仓库路径是否真实且用双引号包裹、终端错误摘要指向 Claude 认证/网络/ACP 入口。
-- 微信没有回复：`npx -y wechat-acp@0.10.0 status`；若 daemon 未运行先报告，不擅自启动。
+- 微信没有回复：`node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js status`；若 daemon 未运行先报告，不擅自启动。
 - 重复回复或登录冲突：确认 macOS 只有一个 `wechat-acp` daemon，确认没有从其他机器复制 `.wechat-acp` 登录目录；先 `wechat-acp stop` 停当前 daemon 再报告，不删除 token。
 
 不要输出 token、二维码内容、环境变量值或完整敏感日志。
+
+### 回滚到官方 0.10.0（仅故障恢复）
+
+若本地构建导致正常收发失败，先停止当前 daemon，再用 `/Users/mac/node_modules/.bin/wechat-acp --agent claude --cwd /Users/mac/workspace/wechat-agent-bot --hide-thoughts --daemon` 恢复官方 `0.10.0`。停止、启动和回滚都必须先取得散帅一次性确认。回滚会重新引入“发送超时可能被当成成功”的已知风险，只用于恢复服务，不代表本问题已解决。
 
 ---
 

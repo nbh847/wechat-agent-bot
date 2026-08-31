@@ -46,6 +46,7 @@ wechat-agent-bot/
 │   ├── reading/       # 想读的书
 │   └── research/      # 想研究的主题
 ├── scripts/
+│   ├── wechat-acp/    # 仅 macOS 的 wechat-acp daemon 启动/验证入口（见下）
 │   └── cron-tasks/    # 定时任务（launchd + wechat-acp inject）
 │       ├── README.md  # 任务清单与约定
 │       └── launchd/   # plist 源文件（加载副本在 ~/Library/LaunchAgents/）
@@ -55,10 +56,20 @@ wechat-agent-bot/
 │   │   ├── claude.md          # Claude
 │   │   └── codex.md           # Codex（待实机核验）
 │   └── research/              # 调研资料
-└── runtime-data/      # 本地运行数据（不进 Git）
+└── runtime-data/      # 本地运行数据（不进 Git，见下）
+    ├── vendor/wechat-acp/    # 固定提交的上游 wechat-acp 源码工作副本
+    └── send-audit/           # 微信文本发送审计（脱敏 JSONL）
 ```
 
 `goals/` 只保存已确认方案在实施期的临时拆分，不是项目进度源。按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 命名；每个 goal 独立定义成功标准和验证方式。整组目标完成并将结果同步到 `ROADMAP.md` 后，经散帅确认再删除对应 initiative 目录。
+
+### 本地临时源码与运行数据（均不进 Git）
+
+`runtime-data/vendor/wechat-acp/`：基于官方固定提交的 `wechat-acp` 源码工作副本，包含“发送失败假成功”的本地根因修复并先在 macOS 验证。项目直接运行使用这个固定构建，不修改 `/Users/mac/node_modules/wechat-acp`，也不以 `npx ...@latest` 作为修复后生产入口。复制到本目录后按 `runtime-data/` 清理规则处理；如需删除必须先经散帅单独批准。
+
+`runtime-data/send-audit/`：每次微信文本发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。只记录时间、耗时、`client_id`、尝试序号、HTTP 状态、`ret`、投递结果与具名错误类型，绝不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
+
+`scripts/wechat-acp/`（仅 macOS）：`start-claude-daemon.sh` 为唯一 daemon 启动入口（人工启动、每周受控重启 wrapper、部署文档的恢复入口共用同一脚本），固定指向本地已验证构建，找不到构建时直接失败、不回退到未修复官方包；`verify-send-failure.sh` 为隔离故障验证入口，只调用测试夹具，不改真实网络或 daemon。整目录由 `scripts/` 整目录忽略，不进 Git。
 
 ## Agent 入口
 
