@@ -21,6 +21,9 @@ scripts/
 # Research docs directory (personal, not for remote)
 docs/research/
 
+# Temporary implementation goals (local only; ROADMAP.md remains the progress source)
+goals/
+
 # Logs and process files
 *.log
 *.pid

@@ -36,10 +36,15 @@ wechat-agent-bot/
 ├── AGENTS.md          # 通用 Agent 规则
 ├── CLAUDE.md          # Claude Code 入口规则
 ├── ROADMAP.md         # 项目进度
+├── goals/             # 本地临时执行目标（不进 Git，完成后经确认删除）
 ├── personal/          # 个人待做事项
-│   ├── reading/       # 待看清单（电影、动画）
 │   ├── destination/   # 旅行目的地
-│   └── research/      # 研究项目
+│   ├── game/          # 想玩的游戏
+│   ├── movie/         # 想看的电影
+│   ├── product/       # 产品想法
+│   ├── project/       # 想做的项目
+│   ├── reading/       # 想读的书
+│   └── research/      # 想研究的主题
 ├── scripts/
 │   └── cron-tasks/    # 定时任务（launchd + wechat-acp inject）
 │       ├── README.md  # 任务清单与约定
@@ -52,6 +57,8 @@ wechat-agent-bot/
 │   └── research/              # 调研资料
 └── runtime-data/      # 本地运行数据（不进 Git）
 ```
+
+`goals/` 只保存已确认方案在实施期的临时拆分，不是项目进度源。按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 命名；每个 goal 独立定义成功标准和验证方式。整组目标完成并将结果同步到 `ROADMAP.md` 后，经散帅确认再删除对应 initiative 目录。
 
 ## Agent 入口
 
