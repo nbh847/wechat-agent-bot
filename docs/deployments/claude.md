@@ -238,11 +238,11 @@ npm view @agentclientprotocol/claude-agent-acp version engines --json
 
 ### 4. 首次启动与登录
 
-首次启动会展示微信二维码，并把 token、同步状态、日志和收件箱数据写入 `%USERPROFILE%\.wechat-acp`。执行前必须向散帅说明风险并取得一次性明确确认，随后在仓库根目录执行：
+首次启动会展示微信二维码，并把 token、同步状态、日志和收件箱数据写入 `%USERPROFILE%\.wechat-acp`。执行前必须向散帅说明风险并取得一次性明确确认，随后在仓库根目录执行；`--hide-thoughts` 让 wechat-acp 不在微信端转发 Agent 的思考过程：
 
 ```powershell
 $RepoRoot = (Get-Location).Path
-npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot"
+npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --hide-thoughts
 ```
 
 随后：
@@ -289,7 +289,7 @@ npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot"
 
 ```powershell
 $RepoRoot = (Get-Location).Path
-npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --daemon
+npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --hide-thoughts --daemon
 npx -y wechat-acp@0.10.0 status
 ```
 
@@ -308,7 +308,7 @@ npx -y wechat-acp@0.10.0 status     # 查看状态
 npx -y wechat-acp@0.10.0 stop       # 停止 daemon
 ```
 
-强制重新扫码需先确认：`npx -y wechat-acp@0.10.0 --agent claude --cwd "D:\workspace\wechat-agent-bot" --login`。
+强制重新扫码需先确认：`npx -y wechat-acp@0.10.0 --agent claude --cwd "D:\workspace\wechat-agent-bot" --hide-thoughts --login`。
 
 不要在本文部署中创建 Windows 计划任务或开机自启。
 
