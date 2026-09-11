@@ -6,7 +6,9 @@
 
 ## 已完成
 
-- 2026-09-09（macOS）：**修复「22h 未活动提醒」数据源 + 新增微信链路心跳监控**。原 `run-send-failure-alert.sh` 误读已冻结的仓库 `runtime-data/conversations/state.json`（8-15 起 daemon 不再写入），导致算出永久休眠、提醒从不触发；改为读权威源 `~/.wechat-acp/state.json` 的 `users[*].lastSeenAt`。心跳 `run-wechat-heartbeat.sh`（launchd StartInterval 每 15 分钟，仅 macOS）双信号判定链路健康：主判据 `send-audit.jsonl` 最近 1h 有 `WeChatSendBusinessError/HttpError` 且无 `success` 抵消（`ret=-2` 记重度）、辅判据 `wechat-acp.log` 新增段 `getUpdates error (3/3)` ≥2；轻度调受控重启、重度（contextToken 过期/需扫码）只告警催人工、无无限重试。背景：9-08 下午起微信 session 失效但 daemon 进程活着、定时任务照跑、send-audit 全绿的隐蔽断链。
+- 2026-09-11（仅 macOS）：**下线并删除临时 token 探针与微信链路心跳监控**。在主动推送原因完成定位后，卸载 `com.sanshuai.wechat-agent-bot.token-probe` 与 `com.sanshuai.wechat-agent-bot.wechat-heartbeat` 两个 launchd 任务，删除 `run-token-probe.sh`、`run-wechat-heartbeat.sh` 及对应 plist。前者不再产生 08:00 至 22:00 整点测试消息；后者不再每 15 分钟把持续 `ret=-2` 重复弹窗并误报为需重新登录。既有日志、状态文件与发送审计保留用于追溯，其他定时任务和 daemon 未修改。
+- 2026-09-11（协议结论双机通用；探针证据仅 macOS）：**完成 iLink 主动推送限制复核并更新调研文档**。腾讯官方当前公开协议要求回复时回传入站 `context_token`，API 与客户端源码未提供独立主动推送凭据或续期接口；公开 issue 报告约 24 小时会话窗口和单令牌约 10 条出站额度，但属于实测线索而非官方 SLA。macOS 小时探针证实 09:00 仍有成功发送，10:00、11:00 均正常调度、正常消费 injection，却各 3 次被 HTTP 200 + `ret=-2` 拒绝；因此排除脚本停摆，并把判断从“固定时长过期”修正为“同一入站令牌的额度耗尽或窗口失效，前者为更强假设但尚未最终区分”。详细证据、来源和双通道建议见 `docs/research/wechat-access-options.md`。
+- 2026-09-09（macOS）：**修复「22h 未活动提醒」数据源 + 新增微信链路心跳监控**。原 `run-send-failure-alert.sh` 误读已冻结的仓库 `runtime-data/conversations/state.json`（8-15 起 daemon 不再写入），导致算出永久休眠、提醒从不触发；改为读权威源 `~/.wechat-acp/state.json` 的 `users[*].lastSeenAt`。心跳 `run-wechat-heartbeat.sh`（launchd StartInterval 每 15 分钟，仅 macOS）双信号判定链路健康：主判据 `send-audit.jsonl` 最近 1h 有 `WeChatSendBusinessError/HttpError` 且无 `success` 抵消（`ret=-2` 记重度业务拒绝，不单独等同于 contextToken 过期）、辅判据 `wechat-acp.log` 新增段 `getUpdates error (3/3)` ≥2；轻度调受控重启、重度只告警催人工、无无限重试。背景：9-08 下午起微信 session 失效但 daemon 进程活着、定时任务照跑、send-audit 全绿的隐蔽断链。
 - 2026-08-31（macOS）：**发送失败假成功根因修复（Goal 01—06）完成并端到端验收**。本地锁定官方提交 `4b787a5`（版本 `0.10.0`），在 API 责任层修复：端点级超时语义、可选 `ret` 响应校验、`sent/pending/unknown` 投递结果传播、bridge 单层三次同 `client_id` 重试、`/acp-more` 原序待取回、脱敏 JSONL 审计；逐字段核对腾讯官方参考实现 `@tencent-weixin/openclaw-weixin@2.4.6` 后证实成功响应允许缺省 `ret` 并在责任层修正。全量测试 235 项：234 通过、1 项 Windows 专属跳过、0 失败；TypeScript 构建与隔离验证通过；受控重启后微信只收到一次完全一致回复、审计仅新增一条 `attempt=1` 干净记录。
 - 2026-08-31（macOS）：**daemon 每周受控重启上线并完成收尾**。每周二 04:00（仅 macOS），wrapper `scripts/cron-tasks/run-daemon-restart.sh` 固定 CLI `0.10.0`、旧实例最多等 90s（`STOP_EXIT_BUDGET`，实测优雅停机约 38s，原 30s 预算过紧已修正）、失败只重试一次；`stop` 前经 macOS `ps` 按 PID 校验命令匹配固定 CLI + `--agent claude` + 项目 `--cwd`，不匹配即中止不发送信号，防 stale PID 误停无关进程。通用临时目标约定：goal 按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 存放、被 `.gitignore` 忽略、整组完成并同步真实进度后经散帅确认删除。观察期见「进行中」。
 - 2026-08-31：**定时推送「微信端一条都没收到」故障排查（8-31）**。结论为偶发网络故障窗口（早间 07:00-09:40 日志内多 tick fetch failed/tool failed、10:10 后恢复），非持续损坏；此前为偶发故障窗口定性，与 9-10 确诊的 contextToken 根因不同。记录 3 个上游 wechat-acp 缺陷：① `apiPost` 把超时 AbortError 洗白为 `{ret:0}` 假成功（第 3 条已修）、② `Agent prompt error` 错误对象未序列化、③ 回复发送成败只进远端遥测、本地无审计。
@@ -24,7 +26,7 @@
 
 ## 进行中
 
-- **定时推送 contextToken 根治（2026-09-10 起待办，等散帅决策）**：根源是 wechat-acp 主动推送依赖最近一次用户消息携带的微信 `contextToken`（短效违纪，实测有效窗口约 10h 上界）且无主动刷新机制，散帅沉默期定时推送「发了也必 `ret=-2` 失败」。解散此前「止血守卫」或在 inject 前拦：因阈值未坐实（历史数据显示 `ret=-2` 与成功交错、非单调过期），守卫已删除，定时推送恢复「直接发送、失败即观察」状态。根治方向：评估微信 IM API 是否提供 bot 主动发送的独立凭证获取/续期接口，在 wechat-acp 主动推送路径接入刷新；涉及改核心依赖（`runtime-data/vendor/wechat-acp/`），需先出方案、经散帅批准后实施，暂未开始。
+- **定时推送可靠通道决策（2026-09-10 起待办，等散帅决策）**：`wechat-acp` 主动推送依赖最近一次微信入站消息的 `contextToken`。2026-09-11 复核确认当前腾讯公开协议与客户端没有独立主动推送凭据或续期接口；公开实测报告存在约 24 小时窗口和单令牌约 10 条出站额度，但不是官方 SLA。本机探针只证实 09:00 成功、10:00 起 `ret=-2`，尚不能最终区分额度耗尽与窗口失效。当前 iLink 只适合低频、近期有入站消息时的尽力推送；根治方向改为交互继续走 iLink，无人值守通知另选具备独立发送凭据的通道，具体选型与实施待散帅确认。
 - **daemon 每周受控重启·一个月观察期（2026-09 月底复核）**：功能已上线（每周二 04:00 自动重启，仅 macOS）。观察指标：若一周内再次出现上下文混淆迹象，周期缩短到 4-5 天；若一个月无劣化迹象，评估放宽。复核时核对 `docs/research/daemon-rolling-restart.md` 与 ROADMAP，确认与实际运行一致。
 - **本机（Win10）龙虾资产的去留与清理（未开始，等散帅明确发起）**：注意本文件中「`~/.qclaw/` 已不存在/已清理」均发生在 macOS 那台电脑上；本机龙虾目录 `D:\qclaw` 保留原样，散帅明确说「开始清理」之前，禁止对其做任何清理、删除、迁移或写入。
 - **Win10 安装 CodeBuddy 并作为 wechat-acp Agent（待实机验收）**：部署文档 `docs/deployments/codebuddy.md` 已含 Win10 节（raw command `codebuddy --acp`、token 复用、与 Claude 切换先 `wechat-acp stop`），但 Win10 端尚未实机跑通，目前仅 macOS 端已完成端到端验收；实装并通过验收后再回填结论。
@@ -32,7 +34,9 @@
 
 ## 最近验证
 
-- 2026-09-10（macOS）：定时推送「收不到」根因确诊。证据链：send-audit 逐小时聚合显示 8 起定时推送全部失败、9-9 21:00 与会话活跃时段成功、无人值守时段失败，与登录/账号无关、重登无解。同日曾短暂上线「contextToken 止血守卫」拦截过期推送，因阈值未坐实（历史数据显示 `ret=-2` 与成功交错、非单调过期）被撤下，定时推送恢复直接发送；根因诊断与根治待办见「进行中」。
+- 2026-09-11 12:09（macOS）：临时监控与探针下线验证。两个 launchd label 均已卸载，`~/Library/LaunchAgents/` 中对应加载副本和项目内四个源文件均已删除；保留 `runtime-data/cron/` 历史日志与状态，未触碰其他任务和 daemon。
+- 2026-09-11（macOS）：08:00 至 22:00 小时探针链路核验。`launchd` 已加载，09:00、10:00、11:00 均执行且 wrapper exit 0；对应 injection 全进入 `done/`，排除调度与队列故障。09:00 时段仍有发送成功记录；10:00、11:00 的短消息各重试 3 次，均为 HTTP 200、`ret=-2`、`WeChatSendBusinessError`。结合腾讯当前协议和公开 issue，修正结论为同一入站 `contextToken` 的出站额度耗尽或窗口失效，不能再把 `ret=-2` 单独等同于固定时长过期。
+- 2026-09-10（macOS）：定时推送「收不到」初步定位。send-audit 逐小时聚合显示 8 起定时推送全部失败、9-9 21:00 与会话活跃时段成功、无人值守时段失败；确认失败位于微信业务拒绝层，而非调度或 Agent 处理层。同日曾短暂上线基于时长的「contextToken 止血守卫」，因阈值未坐实（历史数据显示 `ret=-2` 与成功交错、非单调过期）被撤下，定时推送恢复直接发送；9-11 的协议与探针复核已把原因收敛为同一入站令牌的额度耗尽或窗口失效，见上一条验证和「进行中」。
 - 2026-09-09（macOS）：心跳监控验证。四分支隔离单测（首次基线/健康/轻度/重度）判定全对；cooldown 场景物理验证未真重启 daemon（PID 22947 不变）；launchd 注册成功、手动触发判链路健康、stdout/stderr 无错；修复后 22h 提醒脚本由「休眠」变「0h 前，未到提醒窗口」。
 - 2026-09-07（macOS）：修复星球简报连续 4 天 `client.closeTab is not a function`（9-05 起每次失败）。根因：共享 skill `~/.agents/skills/web-crawler/scripts/cdp-client.js` 在 9-03 修改中丢失 `closeTab(tabId)` 方法，而 `platforms/zsxq.js`/`wechat.js` 仍调用，首个调用即抛 TypeError、未发任何请求，报错文案「无法区分登录或网络」实为误导。补回方法后 `node platforms/zsxq.js feed` 正常返回 5 帖，10:42 手动触发端到端注入真实简报。教训：改共享底层库必须跑调用方回归。
 - 2026-09-06（macOS）：`send-failure-alert` 改造完成并验证。launchd `StartInterval` 每小时触发，读 `runtime-data/conversations/state.json` 中 `role:user` 消息 `createdAt` 计算距最后用户消息时差，22h/23h 各发一次微信提醒、≥24h 时休眠、`.state` 按小时去重；手动触发验证正确算得 535h 前、走休眠分支、未误发。（其数据源问题已于 9-09 修复，见「已完成」）
