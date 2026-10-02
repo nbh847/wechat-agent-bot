@@ -58,6 +58,7 @@ wechat-agent-bot/
 │   └── research/              # 调研资料
 └── runtime-data/      # 本地运行数据（不进 Git，见下）
     ├── vendor/wechat-acp/    # 固定提交的上游 wechat-acp 源码工作副本
+    ├── claude-acp/           # 仅 macOS：固定版本的项目内 Claude ACP 适配器
     └── send-audit/           # 微信文本发送审计（脱敏 JSONL）
 ```
 
@@ -65,11 +66,21 @@ wechat-agent-bot/
 
 ### 本地临时源码与运行数据（均不进 Git）
 
+`runtime-data/claude-acp/`（仅 macOS）：新 Mac 部署使用的固定版本 Claude ACP 适配器及项目内依赖，不依赖运行时下载。与 vendor 构建一起保留，删除前需明确授权；不保存登录凭据。
+
 `runtime-data/vendor/wechat-acp/`：基于官方固定提交的 `wechat-acp` 源码工作副本，包含“发送失败假成功”的本地根因修复并先在 macOS 验证。项目直接运行使用这个固定构建，不修改 `/Users/mac/node_modules/wechat-acp`，也不以 `npx ...@latest` 作为修复后生产入口。复制到本目录后按 `runtime-data/` 清理规则处理；如需删除必须先经散帅单独批准。
 
-`runtime-data/send-audit/`：每次微信文本发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。只记录时间、耗时、`client_id`、尝试序号、HTTP 状态、`ret`、投递结果与具名错误类型，绝不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
+`runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
 
 `scripts/wechat-acp/`（仅 macOS）：`start-claude-daemon.sh` 为唯一 daemon 启动入口（人工启动、每周受控重启 wrapper、部署文档的恢复入口共用同一脚本），固定指向本地已验证构建，找不到构建时直接失败、不回退到未修复官方包；`verify-send-failure.sh` 为隔离故障验证入口，只调用测试夹具，不改真实网络或 daemon。整目录由 `scripts/` 整目录忽略，不进 Git。
+
+新 Mac 启动脚本通过 `build-manifest.json` 校验上游提交、源码及构建指纹，并拒绝已有 Node 微信 Bot 实例。Claude preset 固定调用项目内 `0.85.1` 适配器，不在启动时下载依赖。登录数据位于本机 `/Users/mac/.wechat-acp/`，不进入仓库；启动入口不注册开机自启，也不恢复旧 Mac 定时任务。
+
+`scripts/cron-tasks/`（仅 macOS）：保存任务清单、执行脚本与 `launchd/` 中的 plist 源文件，运行副本位于 `/Users/mac/Library/LaunchAgents/`。`runtime-data/cron/` 保存本机任务日志与互斥锁，不进 Git；成功仅表示脚本完成，微信到达需单独核验。脚本或 Skill 数据源缺失时任务失败退出，不生成占位内容。日志不得记录消息正文、凭据或原始接口响应。来源未恢复的任务不加载；当前恢复状态见项目 ROADMAP 与本地任务清单。停止任务使用对应 label 的 `launchctl bootout`，保留项目源文件和日志；删除须明确授权。
+
+`.claude/skills/glm-stats/`（仅 macOS）：项目级智谱 GLM Coding Plan 额度查询 Skill，脚本按官方用量插件的请求构造，只查询额度端点一次并输出中文卡片。`runtime-data/cron/glm-credentials.json` 保存用户在本机手动录入的专用配置，权限为 `600`，不进 Git；配置不得进入 plist 或日志。`scripts/cron-tasks/setup-glm-credentials.command` 提供隐藏输入的本机录入入口，不改变 Claude Code 的认证配置。查询、定时包装及手动查询共用此 Skill，不读取其他项目的凭据。
+
+智谱额度手动查询、定时推送与转发统一使用 [固定卡片模板](/Users/mac/workspace/wechat-agent-bot/docs/deployments/glm-usage-template.md) ，不由 Agent 临时改版。
 
 ## Agent 入口
 

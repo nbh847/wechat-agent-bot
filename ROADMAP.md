@@ -6,6 +6,16 @@
 
 ## 已完成
 
+- 2026-10-02 20:57（新 Mac／macOS）：按散帅确认，将智谱额度卡片固化为 [模板文档](/Users/mac/workspace/wechat-agent-bot/docs/deployments/glm-usage-template.md) ，统一约定手动查询、每日推送与转发均由同一脚本渲染，未经明确要求不改版；AGENTS、README、Skill 与任务清单统一引用该文档。模板文档保存在 Git 可跟踪路径，避免只存在于本机忽略目录。
+
+- 2026-10-02 20:56（新 Mac／macOS）：智谱额度卡片模板更新为套餐与北京时间表头、5 小时／每周／MCP 月度三个区块、10 格剩余额度进度条、精确已用／剩余比例及重置时间。手动查询和每日任务共用模板，未追加微信推送。
+
+- 2026-10-02 20:51（新 Mac／macOS）：智谱每日额度任务的查询与调度恢复。项目级 glm-stats、隐藏 Key 录入入口、一次性额度查询和注入包装就绪；真实官方查询通过，用户凭据仅项目本地保存（600）；LaunchAgent `com.sanshuai.wechat-agent-bot.glm-usage` 已加载，北京时间每天 09:00。微信发送与自然触发验收仍在进行中，不将加载等同于消息到达。
+
+- 2026-10-02 20:36（新 Mac／macOS）：微信 Bot 基础收发链路验收通过。散帅在微信发送消息并确认收到 Bot 回传；结合已完成的本机构建、ACP 会话创建与后台轮询验证，新 Mac 基础部署完成。工作目录、规则读取与安全边界的专项消息验收未另行确认；旧定时任务未迁移，无开机自启。
+
+- 2026-10-02 20:34（新 Mac／macOS）：项目内构建与启动入口重建并验证。固定上游 `4b787a5`／`0.10.0`，重新实现端点级超时、发送响应校验及基础脱敏审计；安装项目内 Claude ACP `0.85.1`，固定本地入口；启动脚本校验构建指纹与已有 Bot 进程。旧 Mac 完整本地补丁未随 Git 保存，本次不宣称恢复全部历史行为。未迁移定时任务或启用开机自启。
+
 - 2026-09-12（macOS）：**下线并删除「22h 未活动提醒」定时任务**。卸载 `com.sanshuai.wechat-agent-bot.send-failure-alert`（launchd `StartInterval` 每小时），删除 `scripts/cron-tasks/launchd/` 下源 plist、`~/Library/LaunchAgents/` 下运行副本与 wrapper `run-send-failure-alert.sh`，并同步清理 `scripts/cron-tasks/README.md` 目录约定与任务清单。既有日志（`runtime-data/cron/send-failure-alert*.log/.state`）与 ROADMAP 历史记录保留用于追溯。其余 5 个定时任务与 daemon 未修改。
 - 2026-09-11（仅 macOS）：**下线并删除临时 token 探针与微信链路心跳监控**。在主动推送原因完成定位后，卸载 `com.sanshuai.wechat-agent-bot.token-probe` 与 `com.sanshuai.wechat-agent-bot.wechat-heartbeat` 两个 launchd 任务，删除 `run-token-probe.sh`、`run-wechat-heartbeat.sh` 及对应 plist。前者不再产生 08:00 至 22:00 整点测试消息；后者不再每 15 分钟把持续 `ret=-2` 重复弹窗并误报为需重新登录。既有日志、状态文件与发送审计保留用于追溯，其他定时任务和 daemon 未修改。
 - 2026-09-11（协议结论双机通用；探针证据仅 macOS）：**完成 iLink 主动推送限制复核并更新调研文档**。腾讯官方当前公开协议要求回复时回传入站 `context_token`，API 与客户端源码未提供独立主动推送凭据或续期接口；公开 issue 报告约 24 小时会话窗口和单令牌约 10 条出站额度，但属于实测线索而非官方 SLA。macOS 小时探针证实 09:00 仍有成功发送，10:00、11:00 均正常调度、正常消费 injection，却各 3 次被 HTTP 200 + `ret=-2` 拒绝；因此排除脚本停摆，并把判断从“固定时长过期”修正为“同一入站令牌的额度耗尽或窗口失效，前者为更强假设但尚未最终区分”。详细证据、来源和双通道建议见 `docs/research/wechat-access-options.md`。
@@ -21,11 +31,10 @@
 - 2026-08-24：**收敛规则文件职责**。`CLAUDE.md` 只保留一句指向同目录 `AGENTS.md`；启动命令分属 `docs/deployments/*.md`；`AGENTS.md` 补齐工作区级规则继承指针（`/Users/mac/workspace/AGENTS.md`）、`docs/deployments/` 路径与文档链，消除断链。
 - 2026-08-22：**部署文档按 Agent 分篇**。`docs/deployments/{codebuddy,claude,codex}.md` 统一模板，codex 待实机核验占位；按散帅实际用法补正 macOS 启动命令（claude：`npx -y wechat-acp@latest --agent claude --hide-thoughts --daemon`；codebuddy 必须 `--agent "codebuddy --acp"`，裸词当作 raw command 进交互终端、ACP 握手失败）。旧 `deployment-*.md` 经散帅确认后 `git rm`。
 - **2026-08-15~18：切到 `wechat-acp` 受控工作区并落地定时任务链路（早期建设概括）**。明确新方向采用 `wechat-acp` ACP 常驻，不再维护自研微信通道；旧实现及 Goal 7 未提交进度归档到分支 `archive/goal7-agent-v2-20260815`（提交 `183f9e4`，基线 `fecd4db`），`main` 完成规则重写与旧实现清理。定时任务迁为 launchd + `wechat-acp inject --file`：热点新闻 07:00、星球简报 07:30/14:30/18:30、AI 日报 08:30、智谱用量 09:00，wrapper 与 plist 位于 `scripts/cron-tasks/`；确认 inject 文件队列持久化，daemon 离线时排队等待补处理。停用并删除 OpenClaw gateway LaunchAgent、清理 354M 日志；热点新闻 Key 经 `apikey-set` 写入、CLI 可从持久化配置读取不依赖 shell 环境；`brief.mjs` 迁入并改引用共享 skill web-crawler，定时任务与 QClaw 解耦（全盘确认无运行时引用后删除 `~/.qclaw/skills/web-crawler/`，已授权）。
-- **2026-08-16~18：个人数据与资产迁移（概括）**。second-brain 待办库合并迁入 `personal/`（18 重叠以富内容版为准 + 4 独有新增）并删源目录；QClaw 资产归档 `runtime-data/qclaw-archive/`（workspace/downloads/跟踪 JSON/flomo 四块，计数与字节抽查一致、源零改动），skill 注册 `.claude/skills/` 26 个、新建数据 fork `runtime-data/skills-home/`（workspace 1485 + downloads 3299 + d-data 55 文件）、三轮 739 处路径改写，3 个一次性 cron 安装器标记 `.dormant`；CodeBuddy 作为 wechat-acp Agent 完成 macOS 端到端验收（`--agent "codebuddy --acp"` 复用 token 免重扫，4 条验收全过；`_codebuddy.ai/command` 未实现属已知限制）。
-- **2026-08-17：Win10 原生 Claude 部署手册与实机验收**。固定 `wechat-acp@0.10.0` + claude preset + `--hide-thoughts`，前台扫码建本机凭据后切 daemon；微信端 4 条验收 + daemon 回传全部通过。沉淀三个解决：终端半块字符二维码渲染变形扫不出（转 BMP/PNG 图片扫码）、后台孤儿进程与用户新进程双消费同一账号致重复回复（`taskkill` 清理整棵进程树）、确认存活须用 `tasklist`/`wmic` 而非 Git Bash `ps`。文档 `docs/deployment-windows.md`（后并入 `docs/deployments/claude.md`）。
-- **2026-08-18：Win10 定时任务试点 + 股价/闲置检查任务**。计划任务 + wrapper + `wechat-acp inject --file` 链路落地 2 个读取型任务（全资产日报 08:10、工作日午报 12:30，均工作日），手动 `schtasks /run` 与 08:10 自然触发均端到端成功。新增 `stock-alert`（一至五 18:10）港股动态再平衡触发提醒（>57% 卖腾讯买 QQQ / <43% 卖 QQQ 买腾讯，死区 ±7%，`runtime-data/skills-home/workspace/scripts/stock-alert-monitor.cjs`）与 `stale-daily`（每月 28 日）日用品闲置检查，均「输出关键词开头才 inject、否则静默、跟随 last-active-user、不硬编码 --to」。wrapper 均位于 `scripts/cron-tasks/windows/`，本地文件不进 Git。
 
 ## 进行中
+
+- **2026-10-02 20:51（新 Mac／macOS）定时任务逐项恢复，当前先做智谱额度**：glm-stats Skill 与定时包装已重建，4 组隔离测试和包装失败不注入检查通过，Skill 官方校验器通过；散帅本机录入 Key 后，真实额度查询成功（Lite、5 小时／每周／MCP 月度额度与重置时间），凭据权限 600。北京时间每天 09:00 的 LaunchAgent 已加载，源／运行 plist 一致、脚本存在。20:54 散帅明确授权后手动触发一次，launchd runs=1／exit 0，发送审计新增一条 success、无失败；待手机端确认实际收到，首次自然调度未观察。其余 4 项按散帅要求暂缓，未加载。
 
 - **定时推送可靠通道决策（2026-09-10 起待办，等散帅决策）**：`wechat-acp` 主动推送依赖最近一次微信入站消息的 `contextToken`。2026-09-11 复核确认当前腾讯公开协议与客户端没有独立主动推送凭据或续期接口；公开实测报告存在约 24 小时窗口和单令牌约 10 条出站额度，但不是官方 SLA。本机探针只证实 09:00 成功、10:00 起 `ret=-2`，尚不能最终区分额度耗尽与窗口失效。当前 iLink 只适合低频、近期有入站消息时的尽力推送；根治方向改为交互继续走 iLink，无人值守通知另选具备独立发送凭据的通道，具体选型与实施待散帅确认。
 - **daemon 每周受控重启·一个月观察期（2026-09 月底复核）**：功能已上线（每周二 04:00 自动重启，仅 macOS）。观察指标：若一周内再次出现上下文混淆迹象，周期缩短到 4-5 天；若一个月无劣化迹象，评估放宽。复核时核对 `docs/research/daemon-rolling-restart.md` 与 ROADMAP，确认与实际运行一致。
@@ -34,6 +43,22 @@
 - **OpenClaw（`~/.qclaw/`）个人数据迁移收尾**：macOS 侧 second-brain/QClaw 资产迁移已完成（见「已完成」），剩余待整理的残留或新增数据按要求逐步迁入 `personal/`，未明确发起前不擅自清理。
 
 ## 最近验证
+
+- 2026-10-02 21:04（新 Mac／macOS）：提交前核对 AGENTS、README、ROADMAP、Claude 部署说明和智谱固定模板；模板文档与脚本一致，新增文档指针存在，git diff --check 通过。本次提交仅包含文档，不包含被忽略的本机脚本、构建、Skill 或凭据。
+
+- 2026-10-02 20:57（新 Mac／macOS）：固定模板示例与当前 renderCard 输出逐字比对通过；文档指针均存在、git diff --check 通过。仅固化模板约定，未修改查询逻辑、调度或追加推送。
+
+- 2026-10-02 20:56（新 Mac／macOS）：智谱新模板使用上次查询数值生成文本预览；4 组回归测试通过，0%／100%、小数进度条、缺失字段均正确，固定卡片首行保持兼容定时包装，git diff --check 通过。微信端新样式未另行验收。
+
+- 2026-10-02 20:54（新 Mac／macOS）：散帅明确授权即时推送一次后，通过 launchctl kickstart 触发智谱任务；launchd runs=1、last exit code=0，任务错误日志为空。触发时间之后发送审计新增一条 success、ret=null、errorType=null，无失败记录。未重复触发；手机端到达待散帅确认，首次自然 09:00 调度尚未观察。
+
+- 2026-10-02 20:51（新 Mac／macOS）：真实智谱只读查询通过，返回 Lite 套餐及 5 小时／每周／MCP 月度额度和重置时间；Skill 官方校验器通过，配置权限为 600；launchctl print 确认 gui/501 下任务已加载、calendarinterval 为 Hour 9／Minute 0，macOS 时区 CST +0800，源／运行 plist 一致。任务 runs=0，未执行即时推送；git diff --check 通过。
+
+- 2026-10-02 20:45（新 Mac／macOS）：glm-stats 隔离测试覆盖 0%／100% 用量、窗口顺序、未知／缺失字段、401／403／429／500、非 JSON、业务拒绝、域名与文件权限校验，4 组通过；包装失败／非法产物均不调用 inject。5 份 plist 通过 plutil，重启脚本身份正反例通过，shell／Node 语法检查通过。未使用真实 Key 或加载任何新增 LaunchAgent。
+
+- 2026-10-02 20:36（新 Mac／macOS）：微信端实际回传人工验收通过，依据为散帅本轮明确确认“我发了消息，确认 bot 回传了”。未据此扩大为全部部署专项场景或无人值守推送验收。
+
+- 2026-10-02 20:34（新 Mac／macOS）：TypeScript 构建通过；全量 219 项测试 218 通过、1 项 Windows 专属跳过、0 失败；隔离发送与待取回测试 10 项通过。Claude ACP initialize／session/new 通过；daemon status 为 Running（PID 6663），进程核对为单实例，脱敏日志标志确认已复用本机登录并开始消息轮询，无启动 Fatal 或轮询错误。未验证微信端实际回传。
 
 - 2026-09-11 12:09（macOS）：临时监控与探针下线验证。两个 launchd label 均已卸载，`~/Library/LaunchAgents/` 中对应加载副本和项目内四个源文件均已删除；保留 `runtime-data/cron/` 历史日志与状态，未触碰其他任务和 daemon。
 - 2026-09-11（macOS）：08:00 至 22:00 小时探针链路核验。`launchd` 已加载，09:00、10:00、11:00 均执行且 wrapper exit 0；对应 injection 全进入 `done/`，排除调度与队列故障。09:00 时段仍有发送成功记录；10:00、11:00 的短消息各重试 3 次，均为 HTTP 200、`ret=-2`、`WeChatSendBusinessError`。结合腾讯当前协议和公开 issue，修正结论为同一入站 `contextToken` 的出站额度耗尽或窗口失效，不能再把 `ret=-2` 单独等同于固定时长过期。
@@ -47,9 +72,3 @@
 - 2026-08-31（macOS）：发送失败修复 Goal 01—05 与上游核验。隔离验证覆盖业务失败/HTTP 失败/超时/非法响应/三次同键重试/外层不重发/`pending/unknown` 传播/`/acp-more` 原序取回/审计脱敏，`verify-send-failure.sh` 通过；Git SSH 浅克隆核验上游 `main` 最新 `4b787a5` 仍为 `0.10.0`，确认 `src/weixin/api.ts` 仍统一吞 `AbortError`、`sendMessage()` 不校验 `ret`，据此定为责任层源码修复而非 fetch Hook。
 - 2026-08-31（macOS）：goal 拆分、审查修正与临时目录清理。"发送失败假成功"根因方案拆为 `goals/send-failure-root-fix/` 下 6 个顺序 goal（各含范围/前置/步骤/成功标准/验证/依赖/安全边界），审查修正两缺口（方案改名为 `send-failure-root-fix.md`、Goal 05 增加验证脚本职责）；全部命中 `.gitignore`、`git diff --check` 通过；在 6 个 goal 全部完成后经散帅明确批准删除该临时目录，本地修复源码/审计/日志保留。
 - 2026-08-22（macOS）：常驻 agent 从 CodeBuddy 切换为 Claude。先 `wechat-acp stop` 停止原 CodeBuddy daemon（PID 89077），确认退出后以内置 `claude` preset 重启后台 daemon（`wechat-acp@0.10.0 --agent claude --daemon --cwd .../wechat-agent-bot`，PID 85580）；复用 `token.json`（日志 `Loaded saved token`）免重新扫码，`status` Running、无 ACP 初始化错误、消息轮询正常。
-- 2026-08-18（Win10）：定时任务自然触发与 skill 迁移冒烟。08:10 计划任务在调度器上下文自动执行、injection 入队、daemon 消费、Agent 产出 2867 字符资产报告并投递微信；skill 迁移冒烟 `wardrobe.js list` 从 skills-home 正常输出，测试期间 `D:\qclaw` 无写。
-- 2026-08-17（Win10）：部署端到端验证。前提检查（Node 24.13.1 ≥ 22、Claude Code 2.1.177、适配器 0.69.0 与手册基线一致）；微信 4 条验收 + daemon 回传全部符合预期；`--hide-thoughts` 生效（微信端无思考转发，终端仍打印属正常）；单发单收确认无重复投递。
-- 2026-08-17（Win10）：部署文档静态核验。Claude 官方文档确认原生支持 Win10 1809+；`wechat-acp@0.10.0` 官方发布包确认 `claude` preset 启动 `@agentclientprotocol/claude-agent-acp`；npm 元数据确认 ACP 适配器要求 Node.js ≥ 22。未实机执行，实机结果以次日验收为准。
-- 2026-08-16（macOS）：解耦与调度回归。`brief.mjs`（指向共享 web-crawler）删除 qclaw 副本前后各跑一次均正常输出；热点新闻新 wrapper 投递成功（exit 0，injection 进 done）；09:00 智谱用量任务由 launchd 按调度自动触发并投递，调度链路无需人工干预。
-- 2026-08-16：second-brain 合并完整性验证。24 个源文件与 `personal/` 合并结果逐个 `diff -q` 全部一致后才 `rm -rf` 删除源目录；`personal/` 现有 26 个条目文件加 1 个模板。
-- 2026-08-15（macOS）：定时任务全链路验证。`launchctl start` 逐个触发 4 个任务（热点新闻/星球简报/AI 日报/智谱用量）全部 exit 0；injection 队列 done 6 / failed 0，daemon 消费正常；发现并修复 launchd 无用户 PATH 导致 `env: node: No such file or directory`（wrapper 内显式 export nvm bin）。
