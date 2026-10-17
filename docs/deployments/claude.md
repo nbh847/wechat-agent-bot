@@ -312,6 +312,24 @@ npx -y wechat-acp@0.10.0 stop       # 停止 daemon
 
 不要在本文部署中创建 Windows 计划任务或开机自启。
 
+### 运行日志（Win10，仅 Win10）
+
+wechat-acp 的**真正运行日志**在仓库外，由 daemon 每轮追加：
+
+```
+%USERPROFILE%\.wechat-acp\wechat-acp.log
+```
+
+即本机为 `C:\Users\ronnie\.wechat-acp\wechat-acp.log`。需要排查微信 Bot 报错（如 `⚠️ Agent error`、Agent 无回复）时，读这个文件结尾定位根因，并按时间戳回溯。
+
+注意：本项目里的 `runtime-data/send-audit/` 目前**不存在**（未启用该审计功能），仓库存的是插件/工作区文件，不是运行日志。仓库内看不到 daemon 日志，别去仓库里找。
+
+常见排查命令（在 GitBash 里跑）：
+```bash
+tail -n 100 "C:/Users/ronnie/.wechat-acp/wechat-acp.log"       # 看最近
+grep -n "Agent prompt error\|→ failed" "C:/Users/ronnie/.wechat-acp/wechat-acp.log" | tail -40  # 定位报错
+```
+
 ### 故障排查（Win10）
 
 - `claude` 命令不可用：仅执行 `claude --version` 和 `claude doctor` 收集非敏感摘要；不要重装 Claude，向散帅报告 PATH 或安装健康检查结果。

@@ -61,6 +61,7 @@
 
 ## 最近验证
 
+- 2026-10-17 21:04（Win10）：清理 Git 工作区临时文件记录。删除可重新生成且未被 Git 跟踪的 `tmp_ma.py`、`tmp_ma.json`、`tmp_ma2.json`；将任务临时目录 `.tmp/` 加入 `.gitignore`，保留其中来源较早、用途不一的现有内容，不做整目录删除。验证：三个根目录临时文件均不存在，`.tmp/` 命中项目忽略规则且不再出现在 `git status`。
 - 2026-08-31（macOS）：在 Goal 01—06 全部完成并同步真实进度后，经散帅明确批准删除临时目录 `goals/send-failure-root-fix/`；本地修复源码、发送审计和运行日志均保留。
 - 2026-08-31（macOS）：Goal 06 端到端验收完成。第一次切换暴露成功响应 `ret` 可缺省的协议差异，按腾讯官方参考实现修正后，全量测试 235 项中 234 通过、1 项 Windows 专属跳过、0 失败；隔离验证和 TypeScript 构建通过。第二次受控重启 old PID `56005`→new PID `8745`，旧进程 4 秒退出、一次启动成功、launchd exit 0、Running 且全机单实例。微信验收只收到一次完全一致回复；审计基线 3 条后仅新增 1 条，`attempt=1`、HTTP `200`、`ret=null`、`result=success`、`errorType=null`，字段严格匹配允许列表，权限 `600`。
 - 2026-08-31（macOS）：完成“发送失败假成功”Goal 01—05。隔离验证覆盖业务失败、HTTP 失败、超时、非法响应、三次同键重试、外层不重发、`pending/unknown` 传播、`/acp-more` 原序取回和审计脱敏；`verify-send-failure.sh` 全部通过。沙箱外仅为本地回环监听执行全量测试，结果 233 项中 232 通过、1 项 Windows 专属跳过、0 失败；`npm run build`、shell 语法、构建指纹与 `git diff --check` 通过。当前 PID 80069 身份只读核验仍为 `/Users/mac/node_modules/.bin/wechat-acp` 官方构建，本轮未停止或重启 daemon，Goal 06 待确认。
