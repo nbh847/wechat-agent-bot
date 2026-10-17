@@ -19,6 +19,16 @@
 
 ## macOS 部署
 
+### 2026-10-02 新 Mac 部署说明（仅 macOS）
+
+本机使用 Node.js `24.21.0`、Claude Code `2.1.285`、项目内 Claude ACP `0.85.1`（要求 Node.js ≥ 22）。Claude preset 在本地构建中固定调用该适配器的 Node 入口，不再在运行时通过 npm 下载；Win10 的旧部署记录不随本节更新。
+
+本机 `wechat-acp` 固定上游提交 `4b787a5893d879005a6f0a7ebcf9f29ac033a607`，已重新实现端点级超时处理、发送响应校验及基础脱敏审计：仅 `getupdates` 超时返回空轮询，发送超时抛错；发送响应允许缺省 `ret`，显式非零值或非法响应进入失败路径；响应体读取纳入超时预算。复用上游现有同 `client_id` 重试及 `/acp-more` 待取回机制。旧 Mac 完整补丁未保存在 Git，本次不宣称恢复旧 `sent/pending/unknown` 传播与完整审计字段。
+
+本地构建和适配器位于 README 定义的忽略目录，`scripts/wechat-acp/build-manifest.json` 保存源码与构建指纹。恢复方式为重新获取固定提交、应用本机修复、安装固定适配器、构建并通过验证后重新生成指纹；不能直接从 Git 克隆后启动。启动与停止继续使用下文项目内入口，不配置 Bot 开机自启。旧定时任务随后按散帅授权逐项重建，当前优先智谱额度；状态以 ROADMAP 和本机 scripts/cron-tasks/README.md 为准。
+
+本次微信登录已完成，后台轮询已启动；2026-10-02 20:36 散帅确认微信发送消息后收到 Bot 回传，基础收发链路验收通过。工作目录、规则读取与安全边界专项消息未另行验收。全量测试 219 项中 218 项通过、1 项 Windows 专属跳过；隔离发送测试 10 项通过；Claude ACP initialize 和 session/new 通过。
+
 ### 目标与边界
 
 本文供 macOS 上的 Agent 执行，用 Claude 部署基础微信 Bot。只部署基础链路，不迁移 Windows 的定时任务，不配置 macOS 开机自启，不复制其他机器的微信登录凭据。

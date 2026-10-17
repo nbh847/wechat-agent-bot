@@ -45,3 +45,8 @@ coverage/
 .claude/skills/deepseek-balance-first-reply/openclaw.json
 .claude/skills/email-fetch/.env
 .claude/skills/weread-skills/.token
+
+.tmp/
+
+# Project-local skill links; implementations remain under personal/.
+.agents/skills/

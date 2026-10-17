@@ -4,7 +4,7 @@
 
 ## 项目定位
 
-- **核心目标**：通过 `wechat-acp` 实现微信消息驱动的本地 AI Agent，将个人知识管理、待办事项、任务执行整合在一个受控工作区内。
+- **核心目标**：通过 `wechat-acp` 实现微信消息驱动的本地 AI Agent，将个人知识管理、待办事项、任务执行整合在一个受控工作区内；本项目中「入库」指操作 Memex 知识库，授权范围和流程见 [`AGENTS.md`](AGENTS.md)。
 - **替代关系**：本仓库替代 OpenClaw（`~/.qclaw/`）成为主要工作空间；QClow 保留历史数据和部分技能，新活动逐步迁移到此。
 - **数据范围**：个人待做事项、观影清单、旅行目标、研究项目、项目进度、规则文件和必要调研资料。
 
@@ -18,7 +18,7 @@
 本仓库负责：
 
 - 定义 Agent 在当前工作区内的行为、安全和确认规则。
-- 保存个人待做事项（待看清单、旅行目的地、研究项目等）。
+- 保存本机个人清单与想法（待看影视、待读书目、待玩游戏、旅行目的地、项目等）。
 - 保存稳定项目说明、当前进度和必要调研资料。
 - 作为 `wechat-acp --cwd` 指向的默认工作目录。
 
@@ -37,14 +37,15 @@ wechat-agent-bot/
 ├── CLAUDE.md          # Claude Code 入口规则
 ├── ROADMAP.md         # 项目进度
 ├── goals/             # 本地临时执行目标（不进 Git，完成后经确认删除）
-├── personal/          # 个人待做事项
+├── personal/          # 本机个人待做事项（不进 Git；各机器分别保存）
+│   ├── daily-reminders.json # 仅 macOS：每日提醒事项清单
 │   ├── destination/   # 旅行目的地
-│   ├── game/          # 想玩的游戏
-│   ├── movie/         # 想看的电影
+│   ├── game/          # 待玩或想玩的游戏
 │   ├── product/       # 产品想法
 │   ├── project/       # 想做的项目
-│   ├── reading/       # 想读的书
-│   └── research/      # 想研究的主题
+│   ├── reading/       # 待读或想读的书
+│   ├── research/      # 想研究的主题
+│   └── watchlist/     # 待看影视：电影、电视剧、纪录片
 ├── scripts/
 │   ├── wechat-acp/    # 仅 macOS 的 wechat-acp daemon 启动/验证入口（见下）
 │   └── cron-tasks/    # 定时任务（launchd + wechat-acp inject）
@@ -58,25 +59,44 @@ wechat-agent-bot/
 │   └── research/              # 调研资料
 └── runtime-data/      # 本地运行数据（不进 Git，见下）
     ├── vendor/wechat-acp/    # 固定提交的上游 wechat-acp 源码工作副本
+    ├── claude-acp/           # 仅 macOS：固定版本的项目内 Claude ACP 适配器
     └── send-audit/           # 微信文本发送审计（脱敏 JSONL）
 ```
 
 `goals/` 只保存已确认方案在实施期的临时拆分，不是项目进度源。按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 命名；每个 goal 独立定义成功标准和验证方式。整组目标完成并将结果同步到 `ROADMAP.md` 后，经散帅确认再删除对应 initiative 目录。
 
+`personal/` 保存本机个人清单和想法，不进 Git，两台机器各自独立。`personal/watchlist/` 统一记录待看的电影、电视剧和纪录片；`personal/reading/` 记录待读书目；`personal/game/` 记录待玩游戏。清单按一项一份 Markdown 文件记录，使用英文短横线文件名；同一系列的多季合并在一条记录中。完成后更新原条目状态，不自动删除。
+
+`personal/daily-reminders.json`（仅 macOS）：每日打卡提醒的数据源，使用 `version` 和 `items` 字段；每项包含稳定 `id`、提醒文本 `title` 与布尔值 `enabled`。定时脚本每次运行时重新读取此文件，增删改提醒只需编辑 JSON，不用修改脚本或重载调度。该文件位于被 Git 忽略的 `personal/`，两台机器各自保存。
+
 ### 本地临时源码与运行数据（均不进 Git）
+
+`personal/skills/manage-codex-usage/`（仅 macOS）：项目本地 Codex 剩余额度查询 Skill 与标准库 Python 脚本，使用 Bot 项目内 Codex CLI 的 `account/rateLimits/read` 接口，不直接读取凭据、不创建模型会话、不主动发起登录或注销。`.agents/skills/manage-codex-usage` 与 `.claude/skills/manage-codex-usage` 仅以软链接接入同一源目录，均不进 Git；删除须明确授权。可在微信说「查询 Codex 剩余额度」或「Codex 额度还剩多少」。返回当前本机 Codex 登录账号的各额度窗口剩余比例与北京时间重置时间，不按聊天历史估算用量，也不表示 API 现金余额。当前 Bot 使用 `gpt-6-luna max`，账号共享窗口不冒充该模型独享额度。失败返回脱敏提示，单次查询预算为 60 秒，不自动重试或增加定时推送。
+
+`runtime-data/codex-acp/`（仅 macOS）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="max"`，不修改全局 Codex 默认配置。沿用本机 Codex 登录，不复制或输出凭据。启动与恢复入口见 [Codex 部署说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
+
+`runtime-data/claude-acp/`（仅 macOS）：新 Mac 部署使用的固定版本 Claude ACP 适配器及项目内依赖，不依赖运行时下载。与 vendor 构建一起保留，删除前需明确授权；不保存登录凭据。
 
 `runtime-data/vendor/wechat-acp/`：基于官方固定提交的 `wechat-acp` 源码工作副本，包含“发送失败假成功”的本地根因修复并先在 macOS 验证。项目直接运行使用这个固定构建，不修改 `/Users/mac/node_modules/wechat-acp`，也不以 `npx ...@latest` 作为修复后生产入口。复制到本目录后按 `runtime-data/` 清理规则处理；如需删除必须先经散帅单独批准。
 
-`runtime-data/send-audit/`：每次微信文本发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。只记录时间、耗时、`client_id`、尝试序号、HTTP 状态、`ret`、投递结果与具名错误类型，绝不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
+`runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
 
-`scripts/wechat-acp/`（仅 macOS）：`start-claude-daemon.sh` 为唯一 daemon 启动入口（人工启动、每周受控重启 wrapper、部署文档的恢复入口共用同一脚本），固定指向本地已验证构建，找不到构建时直接失败、不回退到未修复官方包；`verify-send-failure.sh` 为隔离故障验证入口，只调用测试夹具，不改真实网络或 daemon。整目录由 `scripts/` 整目录忽略，不进 Git。
+`scripts/wechat-acp/`（仅 macOS）：Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh` 启动后台 daemon，两者均指向本地已验证的微信修复构建，校验指纹与单实例，找不到构建时直接失败。Codex 另校验专用配置与适配器指纹。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
+
+新 Mac 启动脚本通过 `build-manifest.json` 校验上游提交、源码及构建指纹，并拒绝已有 Node 微信 Bot 实例。Claude preset 固定调用项目内 `0.85.1` 适配器，不在启动时下载依赖。登录数据位于本机 `/Users/mac/.wechat-acp/`，不进入仓库；启动入口不注册开机自启，也不恢复旧 Mac 定时任务。
+
+`scripts/cron-tasks/`（仅 macOS）：保存任务清单、执行脚本与 `launchd/` 中的 plist 源文件，运行副本位于 `/Users/mac/Library/LaunchAgents/`。`runtime-data/cron/` 保存本机任务日志与互斥锁，不进 Git；成功仅表示脚本完成，微信到达需单独核验。脚本或 Skill 数据源缺失时任务失败退出，不生成占位内容。日志不得记录消息正文、凭据或原始接口响应。来源未恢复的任务不加载；当前恢复状态见项目 ROADMAP 与本地任务清单。停止任务使用对应 label 的 `launchctl bootout`，保留项目源文件和日志；删除须明确授权。
+
+`.claude/skills/glm-stats/`（仅 macOS）：项目级智谱 GLM Coding Plan 额度查询 Skill，脚本按官方用量插件的请求构造，只查询额度端点一次并输出中文卡片。`runtime-data/cron/glm-credentials.json` 保存用户在本机手动录入的专用配置，权限为 `600`，不进 Git；配置不得进入 plist 或日志。`scripts/cron-tasks/setup-glm-credentials.command` 提供隐藏输入的本机录入入口，不改变 Claude Code 的认证配置。查询、定时包装及手动查询共用此 Skill，不读取其他项目的凭据。
+
+智谱额度手动查询、定时推送与转发统一使用 [固定卡片模板](/Users/mac/workspace/wechat-agent-bot/docs/deployments/glm-usage-template.md) ，不由 Agent 临时改版。
 
 ## Agent 入口
 
 - Codex 读取 [`AGENTS.md`](AGENTS.md) 。
 - Claude Code 先读取 [`CLAUDE.md`](CLAUDE.md) ，再按其指引读取通用规则。
 - CodeBuddy Code 读取全局 `CODEBUDDY.md`（已内嵌本项目规则），并以 `AGENTS.md` 为通用规则源；作为 `wechat-acp` Agent 时用 `wechat-acp --agent "codebuddy --acp"` 拉起，macOS 与 Win10 部署见 [`docs/deployments/codebuddy.md`](docs/deployments/codebuddy.md)。
-- macOS 或 Win10 使用 Claude 部署时读取 [`docs/deployments/claude.md`](docs/deployments/claude.md)；使用 Codex 部署时读取 [`docs/deployments/codex.md`](docs/deployments/codex.md)（后者待实机核验）。后续新增 Agent 时，在 `docs/deployments/` 下复制既有手册模板新增一篇，并回填本段入口。
+- macOS 或 Win10 使用 Claude 部署时读取 [`docs/deployments/claude.md`](docs/deployments/claude.md)；使用 Codex 部署时读取 [`docs/deployments/codex.md`](docs/deployments/codex.md)（macOS 模型、后台启动与微信实收验收通过；规则读取与安全边界专项验收待补；Win10 未验证）。后续新增 Agent 时，在 `docs/deployments/` 下复制既有手册模板新增一篇，并回填本段入口。
 - 当前阶段和明确待办以 [`ROADMAP.md`](ROADMAP.md) 为准。
 
 ## 安全边界
