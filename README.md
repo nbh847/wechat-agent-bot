@@ -47,7 +47,7 @@ wechat-agent-bot/
 │   ├── research/      # 想研究的主题
 │   └── watchlist/     # 待看影视：电影、电视剧、纪录片
 ├── scripts/
-│   ├── wechat-acp/    # 仅 macOS 的 wechat-acp daemon 启动/验证入口（见下）
+│   ├── wechat-acp/    # 按系统区分的 wechat-acp daemon 启动/验证入口（见下）
 │   └── cron-tasks/    # 定时任务（launchd + wechat-acp inject）
 │       ├── README.md  # 任务清单与约定
 │       └── launchd/   # plist 源文件（加载副本在 ~/Library/LaunchAgents/）
@@ -55,10 +55,11 @@ wechat-agent-bot/
 │   ├── deployments/           # 各 Agent 部署手册（每篇含 macOS/Win10 双节；新增 Agent 复制模板加一篇）
 │   │   ├── codebuddy.md       # CodeBuddy
 │   │   ├── claude.md          # Claude
-│   │   └── codex.md           # Codex（待实机核验）
+│   │   └── codex.md           # Codex（macOS 已核验，Win10 见文档状态）
 │   └── research/              # 调研资料
 └── runtime-data/      # 本地运行数据（不进 Git，见下）
     ├── vendor/wechat-acp/    # 固定提交的上游 wechat-acp 源码工作副本
+    ├── codex-acp/           # 各机独立安装的固定版本 Codex ACP 运行依赖
     ├── claude-acp/           # 仅 macOS：固定版本的项目内 Claude ACP 适配器
     └── send-audit/           # 微信文本发送审计（脱敏 JSONL）
 ```
@@ -73,7 +74,7 @@ wechat-agent-bot/
 
 `personal/skills/manage-codex-usage/`（仅 macOS）：项目本地 Codex 剩余额度查询 Skill 与标准库 Python 脚本，使用 Bot 项目内 Codex CLI 的 `account/rateLimits/read` 接口，不直接读取凭据、不创建模型会话、不主动发起登录或注销。`.agents/skills/manage-codex-usage` 与 `.claude/skills/manage-codex-usage` 仅以软链接接入同一源目录，均不进 Git；删除须明确授权。可在微信说「查询 Codex 剩余额度」或「Codex 额度还剩多少」。返回当前本机 Codex 登录账号的各额度窗口剩余比例与北京时间重置时间，不按聊天历史估算用量，也不表示 API 现金余额。当前 Bot 使用 `gpt-6-luna max`，账号共享窗口不冒充该模型独享额度。失败返回脱敏提示，单次查询预算为 60 秒，不自动重试或增加定时推送。
 
-`runtime-data/codex-acp/`（仅 macOS）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="max"`，不修改全局 Codex 默认配置。沿用本机 Codex 登录，不复制或输出凭据。启动与恢复入口见 [Codex 部署说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
+`runtime-data/codex-acp/`（双机通用目录，依赖按机器分别安装）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；macOS 与 Win10 均固定调用 `@agentclientprotocol/codex-acp@2.2.2`，Win10 同目录固定安装 `wechat-acp@0.10.0`，不使用该版本内置且已弃用的 `@zed-industries/codex-acp` preset。启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="max"`，不修改全局 Codex 默认配置。沿用各机本地 Codex 登录，不跨机器复制或输出凭据。启动与恢复入口见 [Codex 部署说明](docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
 
 `runtime-data/claude-acp/`（仅 macOS）：新 Mac 部署使用的固定版本 Claude ACP 适配器及项目内依赖，不依赖运行时下载。与 vendor 构建一起保留，删除前需明确授权；不保存登录凭据。
 
@@ -81,7 +82,7 @@ wechat-agent-bot/
 
 `runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
 
-`scripts/wechat-acp/`（仅 macOS）：Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh` 启动后台 daemon，两者均指向本地已验证的微信修复构建，校验指纹与单实例，找不到构建时直接失败。Codex 另校验专用配置与适配器指纹。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
+`scripts/wechat-acp/`（双机通用目录，脚本按系统区分）：macOS 的 Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh`；Win10 的 Codex 使用 `start-codex-daemon.ps1` 与 `codex-config.win10.json`。各入口只调用本机固定版本依赖，找不到依赖时直接失败；Codex 固定使用 `gpt-6-luna`、`max` 和 `workspace-write`，不修改全局 Codex 配置。macOS 脚本继续校验构建、配置指纹与单实例；Win10 脚本拒绝配置漂移，并由 `wechat-acp` 的 PID 门禁防止重复 daemon。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
 
 新 Mac 启动脚本通过 `build-manifest.json` 校验上游提交、源码及构建指纹，并拒绝已有 Node 微信 Bot 实例。Claude preset 固定调用项目内 `0.85.1` 适配器，不在启动时下载依赖。登录数据位于本机 `/Users/mac/.wechat-acp/`，不进入仓库；启动入口不注册开机自启，也不恢复旧 Mac 定时任务。
 
@@ -96,7 +97,7 @@ wechat-agent-bot/
 - Codex 读取 [`AGENTS.md`](AGENTS.md) 。
 - Claude Code 先读取 [`CLAUDE.md`](CLAUDE.md) ，再按其指引读取通用规则。
 - CodeBuddy Code 读取全局 `CODEBUDDY.md`（已内嵌本项目规则），并以 `AGENTS.md` 为通用规则源；作为 `wechat-acp` Agent 时用 `wechat-acp --agent "codebuddy --acp"` 拉起，macOS 与 Win10 部署见 [`docs/deployments/codebuddy.md`](docs/deployments/codebuddy.md)。
-- macOS 或 Win10 使用 Claude 部署时读取 [`docs/deployments/claude.md`](docs/deployments/claude.md)；使用 Codex 部署时读取 [`docs/deployments/codex.md`](docs/deployments/codex.md)（macOS 模型、后台启动与微信实收验收通过；规则读取与安全边界专项验收待补；Win10 未验证）。后续新增 Agent 时，在 `docs/deployments/` 下复制既有手册模板新增一篇，并回填本段入口。
+- macOS 或 Win10 使用 Claude 部署时读取 [`docs/deployments/claude.md`](docs/deployments/claude.md)；使用 Codex 部署时读取 [`docs/deployments/codex.md`](docs/deployments/codex.md)（macOS 模型、后台启动与微信实收验收通过；Win10 项目内依赖、真实模型请求和后台启动已验证；两机的规则读取与安全边界专项验收待补，Win10 微信实收另待确认）。后续新增 Agent 时，在 `docs/deployments/` 下复制既有手册模板新增一篇，并回填本段入口。
 - 当前阶段和明确待办以 [`ROADMAP.md`](ROADMAP.md) 为准。
 
 ## 安全边界

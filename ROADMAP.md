@@ -6,6 +6,8 @@
 
 ## 已完成
 
+- 2026-10-17 21:33（Win10）：完成本机 Codex 微信 Bot 接入与后台启动。项目内固定安装 `wechat-acp@0.10.0`、`@agentclientprotocol/codex-acp@2.2.2`，使用 raw command 避开已弃用 preset；专用入口固定 `gpt-6-luna`、`model_reasoning_effort=max`、`workspace-write` 和 `--hide-thoughts`，并校验依赖版本与配置，不修改全局 Codex 设置。真实模型请求成功，daemon 单实例运行并开始微信轮询；微信实收和实际 Bot 会话专项验收仍在进行中，未配置开机自启。
+
 - 2026-10-17 15:52（新 Mac／macOS）：按散帅要求固化个人意向清单的触发与归档规则：明确的待看／想看归影视清单，待读／想读归书目清单，待玩／想玩归游戏清单；按内容类型优先判断，普通一次性行动事项仍沿用工作区级待办队列。已同步 AGENTS 与 README；未新增目录或自动跨机同步规则。验证：规则与 README 目录索引一致，`git diff --check` 通过。
 
 - 2026-10-17 15:45（新 Mac／macOS）：按散帅要求将本机个人影视待看清单统一收纳到 `personal/watchlist/`，并在 README 同步目录索引、用途、命名和完成后保留规则；空的 `personal/movie/` 已移除。本机新增一条含两季信息的纪录片记录，个人内容不进 Git，Win10 未同步。验证：索引与实际路径一致，旧目录不存在，新条目存在且被 Git 忽略，`git diff --check` 通过。
@@ -47,7 +49,7 @@
 
 - **2026-10-17（新 Mac／macOS）Codex 额度查询的微信端实收**：Skill 已安装、启用并完成真实只读查询与 12 项回归；待从微信发送「查询 Codex 剩余额度」，确认 Bot 调用并返回额度卡片。未发送主动测试微信；Win10 未适配。
 
-- **2026-10-17（新 Mac／macOS）Codex Bot 专项验收**：实际 Bot 会话的工作目录／项目规则读取与安全边界专项消息仍待验收；Win10 不沿用本次 macOS 结论。未启用开机自启，未迁移 Claude 会话历史。
+- **2026-10-17（macOS／Win10）Codex Bot 专项验收**：macOS 的基础微信实收已通过；Win10 的固定依赖、真实模型请求、后台启动和轮询已通过，微信实收待散帅从微信发消息确认。两机实际 Bot 会话的工作目录／项目规则读取与安全边界专项消息仍待验收；均未启用开机自启，未迁移 Claude 会话历史。
 
 - **2026-10-02 20:51（新 Mac／macOS）定时任务逐项恢复，当前先做智谱额度**：glm-stats Skill 与定时包装已重建，4 组隔离测试和包装失败不注入检查通过，Skill 官方校验器通过；散帅本机录入 Key 后，真实额度查询成功（Lite、5 小时／每周／MCP 月度额度与重置时间），凭据权限 600。北京时间每天 09:00 的 LaunchAgent 已加载，源／运行 plist 一致、脚本存在。20:54 散帅明确授权后手动触发一次，launchd runs=1／exit 0，发送审计新增一条 success、无失败；2026-10-03 新模板即时推送已获散帅手机端实收确认；首次自然调度未观察。热点新闻每日 07:00 任务已于 21:11 按散帅要求取消并删除源 plist；剩余星球简报、AI 日报和 Bot 每周重启暂缓，未加载。
 
@@ -58,6 +60,8 @@
 - **OpenClaw（`~/.qclaw/`）个人数据迁移收尾**：macOS 侧 second-brain/QClaw 资产迁移已完成（见「已完成」），剩余待整理的残留或新增数据按要求逐步迁入 `personal/`，未明确发起前不擅自清理。
 
 ## 最近验证
+
+- 2026-10-17 21:33（Win10）：项目内 `wechat-acp@0.10.0` 与 `@agentclientprotocol/codex-acp@2.2.2` 精确版本检查通过；PowerShell 启动脚本语法和 `gpt-6-luna`／`max` 专用配置通过。适配器自带 Codex CLI 的临时只读真实请求返回预期文本；daemon 状态为 Running，进程命令行包含本项目工作目录、维护版 Codex ACP raw command 与 `--hide-thoughts`，启动日志确认登录复用和轮询开始且无新增启动错误。本轮未发送微信测试消息。
 
 - 2026-10-17 21:04（Win10）：清理 Git 工作区临时文件记录。删除可重新生成且未被 Git 跟踪的 `tmp_ma.py`、`tmp_ma.json`、`tmp_ma2.json`；将任务临时目录 `.tmp/` 加入 `.gitignore`，保留其中来源较早、用途不一的现有内容，不做整目录删除。验证：三个根目录临时文件均不存在，`.tmp/` 命中项目忽略规则且不再出现在 `git status`。
 
@@ -96,5 +100,3 @@
 - 2026-10-02 20:54（新 Mac／macOS）：散帅明确授权即时推送一次后，通过 launchctl kickstart 触发智谱任务；launchd runs=1、last exit code=0，任务错误日志为空。触发时间之后发送审计新增一条 success、ret=null、errorType=null，无失败记录。未重复触发；手机端到达待散帅确认，首次自然 09:00 调度尚未观察。
 
 - 2026-10-02 20:51（新 Mac／macOS）：真实智谱只读查询通过，返回 Lite 套餐及 5 小时／每周／MCP 月度额度和重置时间；Skill 官方校验器通过，配置权限为 600；launchctl print 确认 gui/501 下任务已加载、calendarinterval 为 Hour 9／Minute 0，macOS 时区 CST +0800，源／运行 plist 一致。任务 runs=0，未执行即时推送；git diff --check 通过。
-
-- 2026-10-02 20:45（新 Mac／macOS）：glm-stats 隔离测试覆盖 0%／100% 用量、窗口顺序、未知／缺失字段、401／403／429／500、非 JSON、业务拒绝、域名与文件权限校验，4 组通过；包装失败／非法产物均不调用 inject。5 份 plist 通过 plutil，重启脚本身份正反例通过，shell／Node 语法检查通过。未使用真实 Key 或加载任何新增 LaunchAgent。

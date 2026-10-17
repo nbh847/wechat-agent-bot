@@ -8,9 +8,9 @@
   微信私聊 → wechat-acp → Codex ACP Agent → wechat-agent-bot 工作区
   ```
 
-- 仅 macOS：使用项目内修复版 `wechat-acp@0.10.0`，通过专用配置覆盖 `codex` preset，固定调用项目内 `@agentclientprotocol/codex-acp@2.2.2`。旧的 `@zed-industries/codex-acp` 已弃用，不再作为本机入口。
+- macOS 使用项目内修复版 `wechat-acp@0.10.0`；Win10 使用项目内固定安装的官方 `wechat-acp@0.10.0`。两台机器均通过 raw command 固定调用项目内 `@agentclientprotocol/codex-acp@2.2.2`，不使用该版本内置且已弃用的 `@zed-industries/codex-acp` preset。
 - Bot 专用设置为 `model = "gpt-6-luna"`、`model_reasoning_effort = "max"`，通过适配器 `CODEX_CONFIG` 环境变量传入，不修改全局 Codex 设置。初始权限模式为 `workspace-write`。
-- **状态：2026-10-17，macOS 的模型响应、后台切换与微信实收验收通过；实际 Bot 会话的项目规则读取和安全边界专项验收待补；Win10 未验证。**
+- **状态：2026-10-17，macOS 的模型响应、后台切换与微信实收验收通过；Win10 的固定依赖、真实模型请求与后台轮询启动通过，微信实收待确认；两机实际 Bot 会话的项目规则读取和安全边界专项验收待补。**
 - 同一个微信账号同一时间只能跑一个 `wechat-acp` daemon；在两个 agent 间切换前，必须先 `wechat-acp stop` 停掉旧 daemon（多 agent 共用的边界，详见 [codebuddy.md](codebuddy.md) 与 [claude.md](claude.md) 已核验部分）。
 
 ## macOS 部署
@@ -68,18 +68,43 @@ python3 /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/verify-codex.py
 
 ## Win10 部署
 
-> 待实机核验。预期流程与 [claude.md](claude.md) Win10 节一致，差异仅为命令 `--agent codex`、PowerShell 命令细节与前置要求。核验后回填。
+本节仅适用于 Win10。固定依赖安装在 `runtime-data/codex-acp/`，启动脚本为 `scripts/wechat-acp/start-codex-daemon.ps1`，配置为同目录 `codex-config.win10.json`。这些路径均被项目忽略，不进入 Git；登录数据继续位于 `%USERPROFILE%\.wechat-acp` 与 `%USERPROFILE%\.codex`，不得复制到仓库或另一台机器。
 
-- 历史上游启动命令（待核验，不作为当前 Mac 的入口）：
+项目内安装命令：
 
-  ```powershell
-  $RepoRoot = (Get-Location).Path
-  npx -y wechat-acp@0.10.0 --agent codex --cwd "$RepoRoot"
-  # 后台常驻：
-  npx -y wechat-acp@0.10.0 --agent codex --cwd "$RepoRoot" --daemon
-  ```
+```powershell
+& "$env:ProgramFiles\nodejs\npm.cmd" install --prefix "runtime-data\codex-acp" --save-exact wechat-acp@0.10.0 @agentclientprotocol/codex-acp@2.2.2
+```
 
-- Win10 子进程清理风险见官方 [Issue #71](https://github.com/formulahendry/wechat-acp/issues/71)，是否影响 codex preset 待核验。
+不要使用 `wechat-acp@0.10.0 --agent codex`：该内置 preset 实际调用已弃用的 `@zed-industries/codex-acp`。Win10 启动脚本改用 raw command，直接运行固定安装的维护版适配器；适配器自带兼容的 Codex CLI，不依赖全局 CLI 版本。
+
+前台首次验收：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\wechat-acp\start-codex-daemon.ps1" -Foreground
+```
+
+前台完成微信实收、工作目录、规则读取和安全边界验收后，按 `Ctrl+C` 停止，再启动后台 daemon：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\wechat-acp\start-codex-daemon.ps1"
+```
+
+脚本固定注入 `CODEX_CONFIG={"model":"gpt-6-luna","model_reasoning_effort":"max"}` 与 `INITIAL_AGENT_MODE=workspace-write`，保留 `--hide-thoughts`，不修改全局 Codex 设置，不创建计划任务或开机自启。日常状态与停止命令使用项目内固定 CLI：
+
+```powershell
+node ".\runtime-data\codex-acp\node_modules\wechat-acp\dist\bin\wechat-acp.js" status
+node ".\runtime-data\codex-acp\node_modules\wechat-acp\dist\bin\wechat-acp.js" stop
+```
+
+Win10 子进程清理风险见官方 [Issue #71](https://github.com/formulahendry/wechat-acp/issues/71)。停止后必须按 PID 与完整命令行确认 `wechat-acp`、`codex-acp` 及其 Codex 子进程均退出；不得按进程名批量结束全部 `node.exe`。
+
+### 2026-10-17 Win10 接入验证记录
+
+- 项目内固定安装 `wechat-acp@0.10.0` 与 `@agentclientprotocol/codex-acp@2.2.2`；启动入口校验文件存在、精确版本和专用配置，配置漂移时直接失败。
+- 使用适配器自带 Codex CLI，以 `gpt-6-luna`、`model_reasoning_effort=max`、只读沙箱和临时会话发起真实模型请求，响应成功；该验证不发送微信，也不修改全局 Codex 配置。
+- 后台 daemon 已由固定入口启动，进程命令行确认本项目工作目录、维护版 Codex ACP raw command 与 `--hide-thoughts`，微信登录复用并开始轮询；无新增启动错误。
+- 本轮未主动发送微信测试消息。微信实收、实际 ACP Bot 会话中的工作目录／规则读取和安全边界仍待散帅从微信发消息验收；未配置开机自启。
 
 ## 完成标准
 
@@ -93,6 +118,7 @@ python3 /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/verify-codex.py
 
 - [wechat-acp 官方仓库](https://github.com/formulahendry/wechat-acp)
 - [wechat-acp v0.10.0](https://github.com/formulahendry/wechat-acp/releases/tag/v0.10.0)
+- [OpenAI GPT-6 Luna 模型与推理强度](https://developers.openai.com/api/docs/models/gpt-6-luna)
 - [wechat-acp npm 包](https://www.npmjs.com/package/wechat-acp/v/0.10.0)
 - [Codex ACP 维护仓库与环境配置](https://github.com/agentclientprotocol/codex-acp/tree/v2.2.2)
 - [OpenAI Codex 配置参考](https://learn.chatgpt.com/docs/config-file/config-reference)
