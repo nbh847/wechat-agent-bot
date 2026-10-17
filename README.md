@@ -4,7 +4,7 @@
 
 ## 项目定位
 
-- **核心目标**：通过 `wechat-acp` 实现微信消息驱动的本地 AI Agent，将个人知识管理、待办事项、任务执行整合在一个受控工作区内。
+- **核心目标**：通过 `wechat-acp` 实现微信消息驱动的本地 AI Agent，将个人知识管理、待办事项、任务执行整合在一个受控工作区内；本项目中「入库」指操作 Memex 知识库，授权范围和流程见 [`AGENTS.md`](AGENTS.md)。
 - **替代关系**：本仓库替代 OpenClaw（`~/.qclaw/`）成为主要工作空间；QClow 保留历史数据和部分技能，新活动逐步迁移到此。
 - **数据范围**：个人待做事项、观影清单、旅行目标、研究项目、项目进度、规则文件和必要调研资料。
 
@@ -65,6 +65,8 @@ wechat-agent-bot/
 `goals/` 只保存已确认方案在实施期的临时拆分，不是项目进度源。按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 命名；每个 goal 独立定义成功标准和验证方式。整组目标完成并将结果同步到 `ROADMAP.md` 后，经散帅确认再删除对应 initiative 目录。
 
 ### 本地临时源码与运行数据（均不进 Git）
+
+`personal/skills/manage-codex-usage/`（仅 macOS）：项目本地 Codex 剩余额度查询 Skill 与标准库 Python 脚本，使用 Bot 项目内 Codex CLI 的 `account/rateLimits/read` 接口，不直接读取凭据、不创建模型会话、不主动发起登录或注销。`.agents/skills/manage-codex-usage` 与 `.claude/skills/manage-codex-usage` 仅以软链接接入同一源目录，均不进 Git；删除须明确授权。可在微信说「查询 Codex 剩余额度」或「Codex 额度还剩多少」。返回当前本机 Codex 登录账号的各额度窗口剩余比例与北京时间重置时间，不按聊天历史估算用量，也不表示 API 现金余额。当前 Bot 使用 `gpt-6-luna medium`，账号共享窗口不冒充该模型独享额度。失败返回脱敏提示，单次查询预算为 60 秒，不自动重试或增加定时推送。
 
 `runtime-data/codex-acp/`（仅 macOS）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="medium"`，不修改全局 Codex 默认配置。沿用本机 Codex 登录，不复制或输出凭据。启动与恢复入口见 [Codex 部署说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
 

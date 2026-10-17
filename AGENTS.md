@@ -29,7 +29,7 @@
 - 当前仓库是默认控制项目。自然语言提到其他项目时，只获得与本轮请求相符的只读范围，不改变默认控制项目。
 - 其他项目的创建、修改、移动或删除必须取得绑定本轮任务、目标路径和具体动作的一次性确认。
 - 不读取或输出 `.env`、凭据、密钥、token、私钥、登录状态和完整敏感日志，除非散帅明确授权对应内容和路径。
-- 不得调用 `memex-wiki` skill，也不得通过其他 Agent 间接操作 Memex。
+- **Memex 入库权限（双机通用）**：在本项目中，「入库」指操作 Memex 知识库；散帅已授权本项目通过可用的 Memex 工具执行入库及相关操作。执行时必须先按 Memex 的 `docs/operations/ingestion-sop.md` 判定 manual／auto／batch 模式并遵循完整 SOP；权限仅限 Memex，不扩展到其他外部系统或写操作。若本机没有可用的 Memex 工具或 SOP，不得假装完成，说明阻塞后继续完成不依赖它的工作。
 - 本机（Win10）龙虾目录 `D:\qclaw` 为保留资产：ROADMAP 等文档中「`~/.qclaw/` 已清理/不存在」的记录发生在 macOS 那台电脑上，不代表本机龙虾已退役。散帅明确发起清理之前，不得对 `D:\qclaw` 做任何清理、删除、迁移或写入。
 
 ## 敏感操作确认
@@ -63,6 +63,7 @@
 - 常规只读 Git 可直接执行；删除、回滚、rebase、改历史、push、force-push、tag 和 release 必须先确认。
 - Commit 信息使用中文描述和 `init:`、`feat:`、`fix:`、`refactor:`、`docs:` 或 `chore:` 前缀，不添加 `Co-Authored-By`。
 - **涉及第三方平台查询、统计或监控时，必须优先使用已存在的 skill**（如查询智谱额度用 `glm-stats`，查询 Codex 用量用 `manage-codex-usage`），不得自行解析原始数据或手动格式化输出。
+- **Codex 剩余额度查询（仅 macOS）**：微信请求「查询 Codex 剩余额度」「Codex 额度还剩多少」时，读取项目 `/Users/mac/workspace/wechat-agent-bot/.agents/skills/manage-codex-usage/SKILL.md` 并按其执行，只返回脚本卡片。Skill 源码在被忽略的 `personal/skills/manage-codex-usage/`，`.agents/skills/` 与 `.claude/skills/` 以软链接接入；不得直接读取凭据或从会话 Token 数推算剩余额度。
 - 智谱额度手动查询与定时推送统一使用 `docs/deployments/glm-usage-template.md` 的固定模板，由 `glm-stats` 脚本渲染并直接返回；仅在散帅明确要求改版时变更。
 - 查询 / 整理 / 转发类任务只输出最终产物（如 `glm-stats` 模板卡片），不写开场白、过程叙述（`运行脚本`、`时间戳用代码计算` 等）和结尾的「说明 / 注记」段落；中间步骤一律不进回复。
 
