@@ -66,13 +66,15 @@ wechat-agent-bot/
 
 ### 本地临时源码与运行数据（均不进 Git）
 
+`runtime-data/codex-acp/`（仅 macOS）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="medium"`，不修改全局 Codex 默认配置。沿用本机 Codex 登录，不复制或输出凭据。启动与恢复入口见 [Codex 部署说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
+
 `runtime-data/claude-acp/`（仅 macOS）：新 Mac 部署使用的固定版本 Claude ACP 适配器及项目内依赖，不依赖运行时下载。与 vendor 构建一起保留，删除前需明确授权；不保存登录凭据。
 
 `runtime-data/vendor/wechat-acp/`：基于官方固定提交的 `wechat-acp` 源码工作副本，包含“发送失败假成功”的本地根因修复并先在 macOS 验证。项目直接运行使用这个固定构建，不修改 `/Users/mac/node_modules/wechat-acp`，也不以 `npx ...@latest` 作为修复后生产入口。复制到本目录后按 `runtime-data/` 清理规则处理；如需删除必须先经散帅单独批准。
 
 `runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
 
-`scripts/wechat-acp/`（仅 macOS）：`start-claude-daemon.sh` 为唯一 daemon 启动入口（人工启动、每周受控重启 wrapper、部署文档的恢复入口共用同一脚本），固定指向本地已验证构建，找不到构建时直接失败、不回退到未修复官方包；`verify-send-failure.sh` 为隔离故障验证入口，只调用测试夹具，不改真实网络或 daemon。整目录由 `scripts/` 整目录忽略，不进 Git。
+`scripts/wechat-acp/`（仅 macOS）：Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh` 启动后台 daemon，两者均指向本地已验证的微信修复构建，校验指纹与单实例，找不到构建时直接失败。Codex 另校验专用配置与适配器指纹。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
 
 新 Mac 启动脚本通过 `build-manifest.json` 校验上游提交、源码及构建指纹，并拒绝已有 Node 微信 Bot 实例。Claude preset 固定调用项目内 `0.85.1` 适配器，不在启动时下载依赖。登录数据位于本机 `/Users/mac/.wechat-acp/`，不进入仓库；启动入口不注册开机自启，也不恢复旧 Mac 定时任务。
 
@@ -87,7 +89,7 @@ wechat-agent-bot/
 - Codex 读取 [`AGENTS.md`](AGENTS.md) 。
 - Claude Code 先读取 [`CLAUDE.md`](CLAUDE.md) ，再按其指引读取通用规则。
 - CodeBuddy Code 读取全局 `CODEBUDDY.md`（已内嵌本项目规则），并以 `AGENTS.md` 为通用规则源；作为 `wechat-acp` Agent 时用 `wechat-acp --agent "codebuddy --acp"` 拉起，macOS 与 Win10 部署见 [`docs/deployments/codebuddy.md`](docs/deployments/codebuddy.md)。
-- macOS 或 Win10 使用 Claude 部署时读取 [`docs/deployments/claude.md`](docs/deployments/claude.md)；使用 Codex 部署时读取 [`docs/deployments/codex.md`](docs/deployments/codex.md)（后者待实机核验）。后续新增 Agent 时，在 `docs/deployments/` 下复制既有手册模板新增一篇，并回填本段入口。
+- macOS 或 Win10 使用 Claude 部署时读取 [`docs/deployments/claude.md`](docs/deployments/claude.md)；使用 Codex 部署时读取 [`docs/deployments/codex.md`](docs/deployments/codex.md)（macOS 模型、后台启动与微信实收验收通过；规则读取与安全边界专项验收待补；Win10 未验证）。后续新增 Agent 时，在 `docs/deployments/` 下复制既有手册模板新增一篇，并回填本段入口。
 - 当前阶段和明确待办以 [`ROADMAP.md`](ROADMAP.md) 为准。
 
 ## 安全边界

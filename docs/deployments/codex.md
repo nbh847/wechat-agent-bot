@@ -8,32 +8,62 @@
   微信私聊 → wechat-acp → Codex ACP Agent → wechat-agent-bot 工作区
   ```
 
-- 使用 `wechat-acp@0.10.0` 内置 `codex` preset：`npx @zed-industries/codex-acp`，命令为 `--agent codex`。
-- > **状态：待实机核验。** 本文仅登记 preset 与命令，前置要求、Node 版本、命令细节、规则读取、已知限制与验收结论均未在实机核验，**不得写成已验证**。实机部署通过后再回填对应小节。
+- 仅 macOS：使用项目内修复版 `wechat-acp@0.10.0`，通过专用配置覆盖 `codex` preset，固定调用项目内 `@agentclientprotocol/codex-acp@2.2.2`。旧的 `@zed-industries/codex-acp` 已弃用，不再作为本机入口。
+- Bot 专用设置为 `model = "gpt-6-luna"`、`model_reasoning_effort = "medium"`，通过适配器 `CODEX_CONFIG` 环境变量传入，不修改全局 Codex 设置。初始权限模式为 `workspace-write`。
+- **状态：2026-10-17，macOS 的模型响应、后台切换与微信实收验收通过；实际 Bot 会话的项目规则读取和安全边界专项验收待补；Win10 未验证。**
 - 同一个微信账号同一时间只能跑一个 `wechat-acp` daemon；在两个 agent 间切换前，必须先 `wechat-acp stop` 停掉旧 daemon（多 agent 共用的边界，详见 [codebuddy.md](codebuddy.md) 与 [claude.md](claude.md) 已核验部分）。
 
 ## macOS 部署
 
-> 待实机核验。预期流程与 [claude.md](claude.md) macOS 节一致，差异仅为命令 `--agent codex`、`codex` 命令与 ACP 适配器前置要求。核验后回填「1. 只读前提检查」至「6. 切换后台 daemon」、日常操作与故障排查。
+本节仅适用于当前 Mac，路径不可直接复制到 Win10。
 
-- 启动命令（前台 / 后台二选一，待核验）：
+本地依赖位于 `/Users/mac/workspace/wechat-agent-bot/runtime-data/codex-acp/`，适配器自带兼容 Codex CLI，实际版本由项目内 `package-lock.json` 固定。启动不使用 `npx` 下载包，沿用本机 Codex 登录与微信登录，不复制或输出凭据。当前 Node.js 为 `24.21.0`。
 
-  ```bash
-  RepoRoot=$(pwd)
-  npx -y wechat-acp@0.10.0 --agent codex --cwd "$RepoRoot"
-  # 后台常驻：
-  npx -y wechat-acp@0.10.0 --agent codex --cwd "$RepoRoot" --daemon
-  ```
+启动入口：
 
-- token 猜想：复用 `~/.wechat-acp/token.json` 即可免扫码（待核验）。
-- 规则读取：Codex 读取 `AGENTS.md`（待确认，是否额外读取其他规则文件）。
-- 已知限制：未知，待核验。
+```bash
+bash /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/start-codex-daemon.sh
+```
+
+入口先核对既有微信修复构建指纹、Codex 适配器与配置指纹、单实例和微信登录文件存在性，再启动后台 daemon；保留 `--hide-thoughts`，不注册开机自启。配置位于 `/Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/codex-config.json`，本地指纹位于同目录 `codex-manifest.json`。这些文件受项目忽略规则保护，不进入 Git。
+
+日常只读状态查询：
+
+```bash
+node /Users/mac/workspace/wechat-agent-bot/runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js status
+```
+
+切换 Agent 前必须精确确认 PID 属于本项目的固定构建，再执行下列停止命令，并等待该 Bot 与所属 Agent 子进程退出；不得只看到 stop 成功就启动另一个实例。进程检查需要具备系统进程读取权限，受限沙箱中的 status 可能将权限错误误判为 stale PID，不能用其判断真实存活状态。
+
+```bash
+node /Users/mac/workspace/wechat-agent-bot/runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js stop
+```
+
+恢复 Claude：确认 Codex Bot 已完全退出后，执行 `/Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/start-claude-daemon.sh`。切换不删除旧会话或登录数据，默认新建所选 Agent 的会话，不承诺继承 Claude 对话上下文。智谱任务继续使用相同的 bridge 注入入口。
+
+隔离验证入口（真实模型请求，不发送微信）：
+
+```bash
+python3 /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/verify-codex.py
+```
+
+该验证读取 ACP 会话返回的实际模型与推理强度，再检查真实提示响应；拒绝工具权限请求，结束时清理测试进程组。验证摘要写入 `.tmp/codex-integration/verification.json`，不保存凭据或完整对话。
+
+权限边界：`workspace-write` 不代表全部敏感操作均有技术保护。现有 bridge 仍会自动选择 ACP 允许选项，必须继续遵守项目对话确认规则。
+
+### 2026-10-17 验证记录（仅 macOS）
+
+- 本地适配器 `2.2.2` 与其 Codex CLI `0.160.1` 已安装，启动不依赖全局 CLI `0.159.2`。
+- ACP initialize／session/new 返回 `gpt-6-luna[medium]`，配置选项分别为 `model=gpt-6-luna`、`reasoning_effort=medium`、`mode=workspace-write`；真实提示响应匹配且正常结束。
+- 原 Claude 运行时，Codex 启动入口按预期拒绝重复启动。旧 Claude Bot PID `88657` 及两个子进程退出后，Codex Bot PID `28593` 启动；确认单实例、专用配置、本项目工作目录与 `--hide-thoughts`。
+- 新增日志范围的脱敏标记确认微信登录复用、消息轮询启动，无 Fatal、会话过期或轮询错误；这只反映本次检查时状态。
+- 微信发送与待取回相关 10 项回归通过，Shell／Python 语法检查通过。散帅随后确认 Codex 微信验收通过；实际 Bot 会话的规则读取与安全边界专项验收尚待完成。
 
 ## Win10 部署
 
 > 待实机核验。预期流程与 [claude.md](claude.md) Win10 节一致，差异仅为命令 `--agent codex`、PowerShell 命令细节与前置要求。核验后回填。
 
-- 启动命令（前台 / 后台，待核验）：
+- 历史上游启动命令（待核验，不作为当前 Mac 的入口）：
 
   ```powershell
   $RepoRoot = (Get-Location).Path
@@ -46,10 +76,16 @@
 
 ## 完成标准
 
-待实机核验后，按 [claude.md](claude.md) / [codebuddy.md](codebuddy.md) 的完成标准补充。未核验前，不得将本文描述的部署标为完成。
+- 本机依赖和构建指纹通过，ACP initialize／session/new 成功。
+- ACP 返回实际模型 `gpt-6-luna`、推理强度 `medium`，真实模型响应通过。
+- 旧 Bot 完全退出，新 Codex Bot 单实例运行并开始微信轮询。
+- 微信实收、工作目录／规则读取与安全边界专项消息分别验收。
+- Win10 独立验证，不沿用 macOS 结论。
 
 ## 官方来源
 
 - [wechat-acp 官方仓库](https://github.com/formulahendry/wechat-acp)
 - [wechat-acp v0.10.0](https://github.com/formulahendry/wechat-acp/releases/tag/v0.10.0)
 - [wechat-acp npm 包](https://www.npmjs.com/package/wechat-acp/v/0.10.0)
+- [Codex ACP 维护仓库与环境配置](https://github.com/agentclientprotocol/codex-acp/tree/v2.2.2)
+- [OpenAI Codex 配置参考](https://learn.chatgpt.com/docs/config-file/config-reference)
