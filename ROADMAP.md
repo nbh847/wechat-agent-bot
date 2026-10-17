@@ -6,6 +6,10 @@
 
 ## 已完成
 
+- 2026-10-17 15:52（新 Mac／macOS）：按散帅要求固化个人意向清单的触发与归档规则：明确的待看／想看归影视清单，待读／想读归书目清单，待玩／想玩归游戏清单；按内容类型优先判断，普通一次性行动事项仍沿用工作区级待办队列。已同步 AGENTS 与 README；未新增目录或自动跨机同步规则。验证：规则与 README 目录索引一致，`git diff --check` 通过。
+
+- 2026-10-17 15:45（新 Mac／macOS）：按散帅要求将本机个人影视待看清单统一收纳到 `personal/watchlist/`，并在 README 同步目录索引、用途、命名和完成后保留规则；空的 `personal/movie/` 已移除。本机新增一条含两季信息的纪录片记录，个人内容不进 Git，Win10 未同步。验证：索引与实际路径一致，旧目录不存在，新条目存在且被 Git 忽略，`git diff --check` 通过。
+
 - 2026-10-17 09:31（新 Mac／macOS）：按散帅要求将微信 Bot 推理强度由 `medium` 提升至 `max`，模型保持 `gpt-6-luna`；专用配置、验证脚本和本地指纹同步。隔离 ACP 会话实际返回 `gpt-6-luna[max]`，真实模型响应通过。随后停止旧 Codex Bot 及所属子进程，以固定入口重新启动并确认单实例、登录复用和微信轮询正常；全局 Codex 默认设置未变，本轮重启后的微信实收未另行验证。
 
 - 2026-10-17 09:03（新 Mac／macOS）：`manage-codex-usage` Skill 已在 Mac 跑通，散帅明确确认本机验收通过。源码位于被忽略的 `personal/skills/manage-codex-usage/`，Codex／Claude 的项目 Skill 目录以软链接引用；使用项目固定 Codex CLI 只读 `account/rateLimits/read`，输出各额度桶窗口的剩余／已用比例、进度条及北京时间重置时间。无新增运行依赖，不直接读取凭据、不发送模型提示或新增定时推送；真实额度查询与 Codex 项目 Skill 发现通过。微信端卡片实收仍待验证，Win10 未适配，不沿用 Mac 结论。
@@ -36,10 +40,10 @@
 - 2026-09-09（macOS）：**修复「22h 未活动提醒」数据源 + 新增微信链路心跳监控**。原 `run-send-failure-alert.sh` 误读已冻结的仓库 `runtime-data/conversations/state.json`（8-15 起 daemon 不再写入），导致算出永久休眠、提醒从不触发；改为读权威源 `~/.wechat-acp/state.json` 的 `users[*].lastSeenAt`。心跳 `run-wechat-heartbeat.sh`（launchd StartInterval 每 15 分钟，仅 macOS）双信号判定链路健康：主判据 `send-audit.jsonl` 最近 1h 有 `WeChatSendBusinessError/HttpError` 且无 `success` 抵消（`ret=-2` 记重度业务拒绝，不单独等同于 contextToken 过期）、辅判据 `wechat-acp.log` 新增段 `getUpdates error (3/3)` ≥2；轻度调受控重启、重度只告警催人工、无无限重试。背景：9-08 下午起微信 session 失效但 daemon 进程活着、定时任务照跑、send-audit 全绿的隐蔽断链。
 - 2026-08-31（macOS）：**发送失败假成功根因修复（Goal 01—06）完成并端到端验收**。本地锁定官方提交 `4b787a5`（版本 `0.10.0`），在 API 责任层修复：端点级超时语义、可选 `ret` 响应校验、`sent/pending/unknown` 投递结果传播、bridge 单层三次同 `client_id` 重试、`/acp-more` 原序待取回、脱敏 JSONL 审计；逐字段核对腾讯官方参考实现 `@tencent-weixin/openclaw-weixin@2.4.6` 后证实成功响应允许缺省 `ret` 并在责任层修正。全量测试 235 项：234 通过、1 项 Windows 专属跳过、0 失败；TypeScript 构建与隔离验证通过；受控重启后微信只收到一次完全一致回复、审计仅新增一条 `attempt=1` 干净记录。
 - 2026-08-31（macOS）：**daemon 每周受控重启上线并完成收尾**。每周二 04:00（仅 macOS），wrapper `scripts/cron-tasks/run-daemon-restart.sh` 固定 CLI `0.10.0`、旧实例最多等 90s（`STOP_EXIT_BUDGET`，实测优雅停机约 38s，原 30s 预算过紧已修正）、失败只重试一次；`stop` 前经 macOS `ps` 按 PID 校验命令匹配固定 CLI + `--agent claude` + 项目 `--cwd`，不匹配即中止不发送信号，防 stale PID 误停无关进程。通用临时目标约定：goal 按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 存放、被 `.gitignore` 忽略、整组完成并同步真实进度后经散帅确认删除。观察期见「进行中」。
-- 2026-08-31：**定时推送「微信端一条都没收到」故障排查（8-31）**。结论为偶发网络故障窗口（早间 07:00-09:40 日志内多 tick fetch failed/tool failed、10:10 后恢复），非持续损坏；此前为偶发故障窗口定性，与 9-10 确诊的 contextToken 根因不同。记录 3 个上游 wechat-acp 缺陷：① `apiPost` 把超时 AbortError 洗白为 `{ret:0}` 假成功（第 3 条已修）、② `Agent prompt error` 错误对象未序列化、③ 回复发送成败只进远端遥测、本地无审计。
-- 2026-08-31（macOS）：**新增项目级 skill `context-usage`**（`.claude/skills/context-usage/`）。从最近会话 transcript 尾部解析 usage 以卡片输出真实上下文占用及 1M 窗口占比，触发词「查询上下文/上下文/上下文额度」等。实测 9 天长命会话被 compact 控制在约 19 万 tokens（占 1M 窗口 19%+），滚动重启防的是 compact 摘要的有损性而非窗口爆炸（已补入 `docs/research/daemon-rolling-restart.md`）。仅 macOS 可用。
 
 ## 进行中
+
+- **2026-10-17 16:02（新 Mac／macOS）每日打卡提醒（每天 08:00）**：JSON 清单、Python 脚本和 LaunchAgent 已安装并加载，`launchctl print` 确认 `gui/501` 服务与 08:00 触发；`runs=0`，未在加载时立即发送。清单含「完成拼多多点亮任务」，后续增删改只需编辑 `personal/daily-reminders.json`。首次微信实收待首次自然调度确认；iLink 无人值守限制仍可能导致队列入库后未送达。
 
 - **2026-10-17（新 Mac／macOS）Codex 额度查询的微信端实收**：Skill 已安装、启用并完成真实只读查询与 12 项回归；待从微信发送「查询 Codex 剩余额度」，确认 Bot 调用并返回额度卡片。未发送主动测试微信；Win10 未适配。
 
@@ -54,6 +58,14 @@
 - **OpenClaw（`~/.qclaw/`）个人数据迁移收尾**：macOS 侧 second-brain/QClaw 资产迁移已完成（见「已完成」），剩余待整理的残留或新增数据按要求逐步迁入 `personal/`，未明确发起前不擅自清理。
 
 ## 最近验证
+
+- 2026-10-17 19:07（新 Mac／macOS）：提交前核对个人清单触发与归档规则、README 目录约定和每日打卡提醒记录，文档本地链接与 git diff --check 通过；workspace 总览同步每日提醒的文档状态。此次仅提交现有可跟踪文档改动，不读取个人清单正文、不重新触发任务或复查服务在线状态；脚本、个人数据和运行配置仍按项目忽略规则保留本机。
+
+- 2026-10-17 19:05（新 Mac／macOS）：散帅确认在 16:30 收到每日打卡提醒；一次性任务于 16:30:01 执行成功并入队 1 项。临时 launchd label、安装 plist 和任务临时目录均已清理；正式每日 08:00 任务仍已加载、`runs=0`。
+
+- 2026-10-17 16:10（新 Mac／macOS）：每日打卡提醒一次性任务按本机北京时间触发，读取当前 JSON 清单并成功入队 1 项（任务退出码 0）；微信实际送达未确认。临时 launchd label、安装 plist 和任务临时目录均已自动清理；正式每日 08:00 label 仍已加载、`runs=0`。
+
+- 2026-10-17 16:02（新 Mac／macOS）：每日打卡提醒配置核验。Python 语法与 JSON 解析通过，源 plist `plutil -lint` 通过，安装副本与源文件一致；`launchctl print` 确认触发时间为本机北京时间每天 08:00、`runs=0`。未手动注入提醒，微信实际到达待首次自然运行确认。
 
 - 2026-10-17 09:31（新 Mac／macOS）：`max` 配置的 ACP initialize／session/new 与真实提示响应通过，返回 `model=gpt-6-luna`、`reasoning_effort=max`、`mode=workspace-write`、`end_turn`。原 Codex PID `28593` 及 15 个后代进程完全退出后，新 PID `33846` 单实例运行，固定构建与配置指纹检查通过，微信登录复用和轮询启动标记存在，无新增 Fatal／过期／轮询错误。提交前文档与链接、Shell／Python 语法、git diff --check 通过；本轮未发送微信测试消息。
 
@@ -86,9 +98,3 @@
 - 2026-10-02 20:45（新 Mac／macOS）：glm-stats 隔离测试覆盖 0%／100% 用量、窗口顺序、未知／缺失字段、401／403／429／500、非 JSON、业务拒绝、域名与文件权限校验，4 组通过；包装失败／非法产物均不调用 inject。5 份 plist 通过 plutil，重启脚本身份正反例通过，shell／Node 语法检查通过。未使用真实 Key 或加载任何新增 LaunchAgent。
 
 - 2026-10-02 20:36（新 Mac／macOS）：微信端实际回传人工验收通过，依据为散帅本轮明确确认“我发了消息，确认 bot 回传了”。未据此扩大为全部部署专项场景或无人值守推送验收。
-
-- 2026-10-02 20:34（新 Mac／macOS）：TypeScript 构建通过；全量 219 项测试 218 通过、1 项 Windows 专属跳过、0 失败；隔离发送与待取回测试 10 项通过。Claude ACP initialize／session/new 通过；daemon status 为 Running（PID 6663），进程核对为单实例，脱敏日志标志确认已复用本机登录并开始消息轮询，无启动 Fatal 或轮询错误。未验证微信端实际回传。
-
-- 2026-09-11 12:09（macOS）：临时监控与探针下线验证。两个 launchd label 均已卸载，`~/Library/LaunchAgents/` 中对应加载副本和项目内四个源文件均已删除；保留 `runtime-data/cron/` 历史日志与状态，未触碰其他任务和 daemon。
-- 2026-09-11（macOS）：08:00 至 22:00 小时探针链路核验。`launchd` 已加载，09:00、10:00、11:00 均执行且 wrapper exit 0；对应 injection 全进入 `done/`，排除调度与队列故障。09:00 时段仍有发送成功记录；10:00、11:00 的短消息各重试 3 次，均为 HTTP 200、`ret=-2`、`WeChatSendBusinessError`。结合腾讯当前协议和公开 issue，修正结论为同一入站 `contextToken` 的出站额度耗尽或窗口失效，不能再把 `ret=-2` 单独等同于固定时长过期。
-- 2026-09-10（macOS）：定时推送「收不到」初步定位。send-audit 逐小时聚合显示 8 起定时推送全部失败、9-9 21:00 与会话活跃时段成功、无人值守时段失败；确认失败位于微信业务拒绝层，而非调度或 Agent 处理层。同日曾短暂上线基于时长的「contextToken 止血守卫」，因阈值未坐实（历史数据显示 `ret=-2` 与成功交错、非单调过期）被撤下，定时推送恢复直接发送；9-11 的协议与探针复核已把原因收敛为同一入站令牌的额度耗尽或窗口失效，见上一条验证和「进行中」。

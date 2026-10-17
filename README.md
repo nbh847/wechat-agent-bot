@@ -18,7 +18,7 @@
 本仓库负责：
 
 - 定义 Agent 在当前工作区内的行为、安全和确认规则。
-- 保存个人待做事项（待看清单、旅行目的地、研究项目等）。
+- 保存本机个人清单与想法（待看影视、待读书目、待玩游戏、旅行目的地、项目等）。
 - 保存稳定项目说明、当前进度和必要调研资料。
 - 作为 `wechat-acp --cwd` 指向的默认工作目录。
 
@@ -37,14 +37,15 @@ wechat-agent-bot/
 ├── CLAUDE.md          # Claude Code 入口规则
 ├── ROADMAP.md         # 项目进度
 ├── goals/             # 本地临时执行目标（不进 Git，完成后经确认删除）
-├── personal/          # 个人待做事项
+├── personal/          # 本机个人待做事项（不进 Git；各机器分别保存）
+│   ├── daily-reminders.json # 仅 macOS：每日提醒事项清单
 │   ├── destination/   # 旅行目的地
-│   ├── game/          # 想玩的游戏
-│   ├── movie/         # 想看的电影
+│   ├── game/          # 待玩或想玩的游戏
 │   ├── product/       # 产品想法
 │   ├── project/       # 想做的项目
-│   ├── reading/       # 想读的书
-│   └── research/      # 想研究的主题
+│   ├── reading/       # 待读或想读的书
+│   ├── research/      # 想研究的主题
+│   └── watchlist/     # 待看影视：电影、电视剧、纪录片
 ├── scripts/
 │   ├── wechat-acp/    # 仅 macOS 的 wechat-acp daemon 启动/验证入口（见下）
 │   └── cron-tasks/    # 定时任务（launchd + wechat-acp inject）
@@ -63,6 +64,10 @@ wechat-agent-bot/
 ```
 
 `goals/` 只保存已确认方案在实施期的临时拆分，不是项目进度源。按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 命名；每个 goal 独立定义成功标准和验证方式。整组目标完成并将结果同步到 `ROADMAP.md` 后，经散帅确认再删除对应 initiative 目录。
+
+`personal/` 保存本机个人清单和想法，不进 Git，两台机器各自独立。`personal/watchlist/` 统一记录待看的电影、电视剧和纪录片；`personal/reading/` 记录待读书目；`personal/game/` 记录待玩游戏。清单按一项一份 Markdown 文件记录，使用英文短横线文件名；同一系列的多季合并在一条记录中。完成后更新原条目状态，不自动删除。
+
+`personal/daily-reminders.json`（仅 macOS）：每日打卡提醒的数据源，使用 `version` 和 `items` 字段；每项包含稳定 `id`、提醒文本 `title` 与布尔值 `enabled`。定时脚本每次运行时重新读取此文件，增删改提醒只需编辑 JSON，不用修改脚本或重载调度。该文件位于被 Git 忽略的 `personal/`，两台机器各自保存。
 
 ### 本地临时源码与运行数据（均不进 Git）
 
