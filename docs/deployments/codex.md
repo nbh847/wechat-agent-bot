@@ -9,7 +9,7 @@
   ```
 
 - 仅 macOS：使用项目内修复版 `wechat-acp@0.10.0`，通过专用配置覆盖 `codex` preset，固定调用项目内 `@agentclientprotocol/codex-acp@2.2.2`。旧的 `@zed-industries/codex-acp` 已弃用，不再作为本机入口。
-- Bot 专用设置为 `model = "gpt-6-luna"`、`model_reasoning_effort = "medium"`，通过适配器 `CODEX_CONFIG` 环境变量传入，不修改全局 Codex 设置。初始权限模式为 `workspace-write`。
+- Bot 专用设置为 `model = "gpt-6-luna"`、`model_reasoning_effort = "max"`，通过适配器 `CODEX_CONFIG` 环境变量传入，不修改全局 Codex 设置。初始权限模式为 `workspace-write`。
 - **状态：2026-10-17，macOS 的模型响应、后台切换与微信实收验收通过；实际 Bot 会话的项目规则读取和安全边界专项验收待补；Win10 未验证。**
 - 同一个微信账号同一时间只能跑一个 `wechat-acp` daemon；在两个 agent 间切换前，必须先 `wechat-acp stop` 停掉旧 daemon（多 agent 共用的边界，详见 [codebuddy.md](codebuddy.md) 与 [claude.md](claude.md) 已核验部分）。
 
@@ -51,7 +51,14 @@ python3 /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/verify-codex.py
 
 权限边界：`workspace-write` 不代表全部敏感操作均有技术保护。现有 bridge 仍会自动选择 ACP 允许选项，必须继续遵守项目对话确认规则。
 
-### 2026-10-17 验证记录（仅 macOS）
+### 2026-10-17 09:31 推理强度更新（仅 macOS）
+
+- 按散帅要求由 `medium` 改为 `max`，模型仍为 `gpt-6-luna`；专用配置、本地指纹和验证脚本已同步，不修改全局 Codex 配置。
+- 隔离 ACP 会话返回 `gpt-6-luna[max]`、`reasoning_effort=max`，真实提示响应匹配且正常 `end_turn`。
+- 旧 Codex Bot PID `28593` 及所属 15 个后代进程退出后，重新通过固定入口启动 PID `33846`；构建／配置指纹、单实例、工作目录与 `--hide-thoughts` 检查通过。
+- 重启后确认微信登录复用、轮询启动，无新增 Fatal、会话过期或轮询错误；本轮未发送微信测试消息，`max` 重启后的微信实收待确认。
+
+### 2026-10-17 首次接入验证记录（仅 macOS，当时为 medium）
 
 - 本地适配器 `2.2.2` 与其 Codex CLI `0.160.1` 已安装，启动不依赖全局 CLI `0.159.2`。
 - ACP initialize／session/new 返回 `gpt-6-luna[medium]`，配置选项分别为 `model=gpt-6-luna`、`reasoning_effort=medium`、`mode=workspace-write`；真实提示响应匹配且正常结束。
@@ -77,7 +84,7 @@ python3 /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/verify-codex.py
 ## 完成标准
 
 - 本机依赖和构建指纹通过，ACP initialize／session/new 成功。
-- ACP 返回实际模型 `gpt-6-luna`、推理强度 `medium`，真实模型响应通过。
+- ACP 返回实际模型 `gpt-6-luna`、推理强度 `max`，真实模型响应通过。
 - 旧 Bot 完全退出，新 Codex Bot 单实例运行并开始微信轮询。
 - 微信实收、工作目录／规则读取与安全边界专项消息分别验收。
 - Win10 独立验证，不沿用 macOS 结论。

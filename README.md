@@ -66,9 +66,9 @@ wechat-agent-bot/
 
 ### 本地临时源码与运行数据（均不进 Git）
 
-`personal/skills/manage-codex-usage/`（仅 macOS）：项目本地 Codex 剩余额度查询 Skill 与标准库 Python 脚本，使用 Bot 项目内 Codex CLI 的 `account/rateLimits/read` 接口，不直接读取凭据、不创建模型会话、不主动发起登录或注销。`.agents/skills/manage-codex-usage` 与 `.claude/skills/manage-codex-usage` 仅以软链接接入同一源目录，均不进 Git；删除须明确授权。可在微信说「查询 Codex 剩余额度」或「Codex 额度还剩多少」。返回当前本机 Codex 登录账号的各额度窗口剩余比例与北京时间重置时间，不按聊天历史估算用量，也不表示 API 现金余额。当前 Bot 使用 `gpt-6-luna medium`，账号共享窗口不冒充该模型独享额度。失败返回脱敏提示，单次查询预算为 60 秒，不自动重试或增加定时推送。
+`personal/skills/manage-codex-usage/`（仅 macOS）：项目本地 Codex 剩余额度查询 Skill 与标准库 Python 脚本，使用 Bot 项目内 Codex CLI 的 `account/rateLimits/read` 接口，不直接读取凭据、不创建模型会话、不主动发起登录或注销。`.agents/skills/manage-codex-usage` 与 `.claude/skills/manage-codex-usage` 仅以软链接接入同一源目录，均不进 Git；删除须明确授权。可在微信说「查询 Codex 剩余额度」或「Codex 额度还剩多少」。返回当前本机 Codex 登录账号的各额度窗口剩余比例与北京时间重置时间，不按聊天历史估算用量，也不表示 API 现金余额。当前 Bot 使用 `gpt-6-luna max`，账号共享窗口不冒充该模型独享额度。失败返回脱敏提示，单次查询预算为 60 秒，不自动重试或增加定时推送。
 
-`runtime-data/codex-acp/`（仅 macOS）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="medium"`，不修改全局 Codex 默认配置。沿用本机 Codex 登录，不复制或输出凭据。启动与恢复入口见 [Codex 部署说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
+`runtime-data/codex-acp/`（仅 macOS）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="max"`，不修改全局 Codex 默认配置。沿用本机 Codex 登录，不复制或输出凭据。启动与恢复入口见 [Codex 部署说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
 
 `runtime-data/claude-acp/`（仅 macOS）：新 Mac 部署使用的固定版本 Claude ACP 适配器及项目内依赖，不依赖运行时下载。与 vendor 构建一起保留，删除前需明确授权；不保存登录凭据。
 

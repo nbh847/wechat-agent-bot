@@ -6,6 +6,8 @@
 
 ## 已完成
 
+- 2026-10-17 09:31（新 Mac／macOS）：按散帅要求将微信 Bot 推理强度由 `medium` 提升至 `max`，模型保持 `gpt-6-luna`；专用配置、验证脚本和本地指纹同步。隔离 ACP 会话实际返回 `gpt-6-luna[max]`，真实模型响应通过。随后停止旧 Codex Bot 及所属子进程，以固定入口重新启动并确认单实例、登录复用和微信轮询正常；全局 Codex 默认设置未变，本轮重启后的微信实收未另行验证。
+
 - 2026-10-17 09:03（新 Mac／macOS）：`manage-codex-usage` Skill 已在 Mac 跑通，散帅明确确认本机验收通过。源码位于被忽略的 `personal/skills/manage-codex-usage/`，Codex／Claude 的项目 Skill 目录以软链接引用；使用项目固定 Codex CLI 只读 `account/rateLimits/read`，输出各额度桶窗口的剩余／已用比例、进度条及北京时间重置时间。无新增运行依赖，不直接读取凭据、不发送模型提示或新增定时推送；真实额度查询与 Codex 项目 Skill 发现通过。微信端卡片实收仍待验证，Win10 未适配，不沿用 Mac 结论。
 
 - 2026-10-17 08:47（双机通用／项目权限）：散帅明确授权本项目操作 Memex 知识库，并确认「入库」即指 Memex 入库。项目规则已记录授权边界与 SOP 入口；每次实际入库仍须按 `docs/operations/ingestion-sop.md` 判定 manual／auto／batch 并执行对应流程。本条仅记录权限和流程约定，不代表本次执行了 Memex 写入。
@@ -36,11 +38,10 @@
 - 2026-08-31（macOS）：**daemon 每周受控重启上线并完成收尾**。每周二 04:00（仅 macOS），wrapper `scripts/cron-tasks/run-daemon-restart.sh` 固定 CLI `0.10.0`、旧实例最多等 90s（`STOP_EXIT_BUDGET`，实测优雅停机约 38s，原 30s 预算过紧已修正）、失败只重试一次；`stop` 前经 macOS `ps` 按 PID 校验命令匹配固定 CLI + `--agent claude` + 项目 `--cwd`，不匹配即中止不发送信号，防 stale PID 误停无关进程。通用临时目标约定：goal 按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 存放、被 `.gitignore` 忽略、整组完成并同步真实进度后经散帅确认删除。观察期见「进行中」。
 - 2026-08-31：**定时推送「微信端一条都没收到」故障排查（8-31）**。结论为偶发网络故障窗口（早间 07:00-09:40 日志内多 tick fetch failed/tool failed、10:10 后恢复），非持续损坏；此前为偶发故障窗口定性，与 9-10 确诊的 contextToken 根因不同。记录 3 个上游 wechat-acp 缺陷：① `apiPost` 把超时 AbortError 洗白为 `{ret:0}` 假成功（第 3 条已修）、② `Agent prompt error` 错误对象未序列化、③ 回复发送成败只进远端遥测、本地无审计。
 - 2026-08-31（macOS）：**新增项目级 skill `context-usage`**（`.claude/skills/context-usage/`）。从最近会话 transcript 尾部解析 usage 以卡片输出真实上下文占用及 1M 窗口占比，触发词「查询上下文/上下文/上下文额度」等。实测 9 天长命会话被 compact 控制在约 19 万 tokens（占 1M 窗口 19%+），滚动重启防的是 compact 摘要的有损性而非窗口爆炸（已补入 `docs/research/daemon-rolling-restart.md`）。仅 macOS 可用。
-- 2026-08-31：**AGENTS.md 新增「机器与系统标注」强制约定**。本仓库跨 macOS 与 Win10，机器特定内容必须标注「仅 macOS/仅 Win10/双机通用」，ROADMAP 操作注明执行机器；触发背景：Win10 侧 `.claude/skills/` 26 个 skill 曾使 macOS 侧误判目录存在。
 
 ## 进行中
 
-- **2026-10-17（新 Mac／macOS）Codex 额度查询的微信端实收**：Skill 已安装、启用并完成真实只读查询与 12 项回归；待从微信发送「查询 Codex 剩余额度」，确认 Bot 调用并返回额度卡片。未重启现有 Bot，未发送主动测试微信；Win10 未适配。
+- **2026-10-17（新 Mac／macOS）Codex 额度查询的微信端实收**：Skill 已安装、启用并完成真实只读查询与 12 项回归；待从微信发送「查询 Codex 剩余额度」，确认 Bot 调用并返回额度卡片。未发送主动测试微信；Win10 未适配。
 
 - **2026-10-17（新 Mac／macOS）Codex Bot 专项验收**：实际 Bot 会话的工作目录／项目规则读取与安全边界专项消息仍待验收；Win10 不沿用本次 macOS 结论。未启用开机自启，未迁移 Claude 会话历史。
 
@@ -53,6 +54,8 @@
 - **OpenClaw（`~/.qclaw/`）个人数据迁移收尾**：macOS 侧 second-brain/QClaw 资产迁移已完成（见「已完成」），剩余待整理的残留或新增数据按要求逐步迁入 `personal/`，未明确发起前不擅自清理。
 
 ## 最近验证
+
+- 2026-10-17 09:31（新 Mac／macOS）：`max` 配置的 ACP initialize／session/new 与真实提示响应通过，返回 `model=gpt-6-luna`、`reasoning_effort=max`、`mode=workspace-write`、`end_turn`。原 Codex PID `28593` 及 15 个后代进程完全退出后，新 PID `33846` 单实例运行，固定构建与配置指纹检查通过，微信登录复用和轮询启动标记存在，无新增 Fatal／过期／轮询错误。提交前文档与链接、Shell／Python 语法、git diff --check 通过；本轮未发送微信测试消息。
 
 - 2026-10-17 09:03（新 Mac／macOS）：按散帅要求实际调用 `manage-codex-usage`，08:59:29 成功返回 Plus、5 小时剩余 85%／已用 15%（重置 2026-10-17 13:19:56）、每周剩余 64%／已用 36%（重置 2026-10-22 21:25:11），均为北京时间且仅代表该查询时刻。散帅明确确认 Skill 已在 Mac 跑通；本次确认不扩大到微信端卡片实收或 Win10。提交前核对文档、源码忽略边界与现有 12 项测试／Skill 校验证据，未重复查询额度或重启 Bot。
 
@@ -89,4 +92,3 @@
 - 2026-09-11 12:09（macOS）：临时监控与探针下线验证。两个 launchd label 均已卸载，`~/Library/LaunchAgents/` 中对应加载副本和项目内四个源文件均已删除；保留 `runtime-data/cron/` 历史日志与状态，未触碰其他任务和 daemon。
 - 2026-09-11（macOS）：08:00 至 22:00 小时探针链路核验。`launchd` 已加载，09:00、10:00、11:00 均执行且 wrapper exit 0；对应 injection 全进入 `done/`，排除调度与队列故障。09:00 时段仍有发送成功记录；10:00、11:00 的短消息各重试 3 次，均为 HTTP 200、`ret=-2`、`WeChatSendBusinessError`。结合腾讯当前协议和公开 issue，修正结论为同一入站 `contextToken` 的出站额度耗尽或窗口失效，不能再把 `ret=-2` 单独等同于固定时长过期。
 - 2026-09-10（macOS）：定时推送「收不到」初步定位。send-audit 逐小时聚合显示 8 起定时推送全部失败、9-9 21:00 与会话活跃时段成功、无人值守时段失败；确认失败位于微信业务拒绝层，而非调度或 Agent 处理层。同日曾短暂上线基于时长的「contextToken 止血守卫」，因阈值未坐实（历史数据显示 `ret=-2` 与成功交错、非单调过期）被撤下，定时推送恢复直接发送；9-11 的协议与探针复核已把原因收敛为同一入站令牌的额度耗尽或窗口失效，见上一条验证和「进行中」。
-- 2026-09-09（macOS）：心跳监控验证。四分支隔离单测（首次基线/健康/轻度/重度）判定全对；cooldown 场景物理验证未真重启 daemon（PID 22947 不变）；launchd 注册成功、手动触发判链路健康、stdout/stderr 无错；修复后 22h 提醒脚本由「休眠」变「0h 前，未到提醒窗口」。
