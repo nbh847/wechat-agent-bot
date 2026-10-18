@@ -43,13 +43,15 @@
 
 ## 进行中
 
-- **2026-10-17 16:02（新 Mac／macOS）每日打卡提醒（每天 08:00）**：JSON 清单、Python 脚本和 LaunchAgent 已安装并加载，`launchctl print` 确认 `gui/501` 服务与 08:00 触发；`runs=0`，未在加载时立即发送。清单含「完成拼多多点亮任务」，后续增删改只需编辑 `personal/daily-reminders.json`。首次微信实收待首次自然调度确认；iLink 无人值守限制仍可能导致队列入库后未送达。
+- **2026-10-18（新 Mac／仅 macOS）星球简报**：抓取入口已切换为全局 `web-crawler` Skill 的知识星球 `feed` handler，并由 `start-edge-cdp.sh` 确保 CDP 可用；LaunchAgent 每天 12:00、18:00 汇总「帅张和他的朋友们」近 24 小时内 `stormzhang` 的发言。Skill 手动抓取已验证，首次自然调度及微信实际送达待观察；任务不在加载时立即发送。
 
-- **2026-10-17（新 Mac／macOS）Codex 额度查询的微信端实收**：Skill 已安装、启用并完成真实只读查询与 12 项回归；待从微信发送「查询 Codex 剩余额度」，确认 Bot 调用并返回额度卡片。未发送主动测试微信；Win10 未适配。
+- **2026-10-17（新 Mac／仅 macOS）每日打卡提醒（每天 06:00）**：JSON 清单、Python 脚本和 LaunchAgent 已安装并加载；2026-10-18 按散帅要求将时间从 08:00 调整为 06:00。清单含「完成拼多多点亮任务」，后续增删改只需编辑 `personal/daily-reminders.json`。微信实收仍受 iLink 无人值守限制影响。
+
+- **2026-10-18（新 Mac／仅 macOS）统一额度查询**：智谱与 Codex 均按全局 `quota-usage` Skill 查询；手动请求和每天 09:00 定时任务调用 `/Users/mac/.codex/skills/quota-usage/scripts/query.py`，定时任务使用 `--all`。全局脚本入口与配置路径已核对，切换后的真实查询及定时推送仍待观察。受限工具沙箱若拦截 Codex App Server，须通过宿主权限流程重跑同一入口。Win10 未适配。
 
 - **2026-10-17（新 Mac／macOS）Codex Bot 专项验收**：实际 Bot 会话的工作目录／项目规则读取与安全边界专项消息仍待验收；Win10 不沿用本次 macOS 结论。未启用开机自启，未迁移 Claude 会话历史。
 
-- **2026-10-02 20:51（新 Mac／macOS）定时任务逐项恢复，当前先做智谱额度**：glm-stats Skill 与定时包装已重建，4 组隔离测试和包装失败不注入检查通过，Skill 官方校验器通过；散帅本机录入 Key 后，真实额度查询成功（Lite、5 小时／每周／MCP 月度额度与重置时间），凭据权限 600。北京时间每天 09:00 的 LaunchAgent 已加载，源／运行 plist 一致、脚本存在。20:54 散帅明确授权后手动触发一次，launchd runs=1／exit 0，发送审计新增一条 success、无失败；2026-10-03 新模板即时推送已获散帅手机端实收确认；首次自然调度未观察。热点新闻每日 07:00 任务已于 21:11 按散帅要求取消并删除源 plist；剩余星球简报、AI 日报和 Bot 每周重启暂缓，未加载。
+- **2026-10-02（新 Mac／仅 macOS）每日额度任务**：智谱额度的 LaunchAgent 每天 09:00 运行；包装器现调用全局 `/Users/mac/.codex/skills/quota-usage/scripts/query.py --all`，与手动单项查询共用 Skill。切换后的真实查询、首次合并推送与微信实收待观察；AI 日报和 Bot 每周重启仍未加载。
 
 - **定时推送可靠通道决策（2026-09-10 起待办，等散帅决策）**：`wechat-acp` 主动推送依赖最近一次微信入站消息的 `contextToken`。2026-09-11 复核确认当前腾讯公开协议与客户端没有独立主动推送凭据或续期接口；公开实测报告存在约 24 小时窗口和单令牌约 10 条出站额度，但不是官方 SLA。本机探针只证实 09:00 成功、10:00 起 `ret=-2`，尚不能最终区分额度耗尽与窗口失效。当前 iLink 只适合低频、近期有入站消息时的尽力推送；根治方向改为交互继续走 iLink，无人值守通知另选具备独立发送凭据的通道，具体选型与实施待散帅确认。
 - **daemon 每周受控重启·一个月观察期（2026-09 月底复核）**：功能已上线（每周二 04:00 自动重启，仅 macOS）。观察指标：若一周内再次出现上下文混淆迹象，周期缩短到 4-5 天；若一个月无劣化迹象，评估放宽。复核时核对 `docs/research/daemon-rolling-restart.md` 与 ROADMAP，确认与实际运行一致。
@@ -58,6 +60,24 @@
 - **OpenClaw（`~/.qclaw/`）个人数据迁移收尾**：macOS 侧 second-brain/QClaw 资产迁移已完成（见「已完成」），剩余待整理的残留或新增数据按要求逐步迁入 `personal/`，未明确发起前不擅自清理。
 
 ## 最近验证
+
+- 2026-10-18 16:58（新 Mac／仅 macOS）：提交前核对统一额度查询入口、星球简报抓取入口、每日 06:00 提醒与四份待提交文档的一致性；文档本地链接、全局 Skill 与脚本入口存在性及 `git diff --check` 通过。仅检查文档与路径，未重新查询额度、运行抓取、触发推送或复验服务在线；本机脚本、个人数据、凭据与运行配置继续按忽略规则保留本机。
+
+- 2026-10-18 16:43（新 Mac／仅 macOS）：按散帅要求将星球简报定时抓取切换为全局 `web-crawler` Skill 的知识星球 `feed` handler；定时脚本先复用或启动 Skill 的 CDP，再读取最多 20 条并按北京时间筛选星主近 24 小时发言。更新项目规则、README 和本地定时任务说明。通过更新后脚本的只读抓取函数获取 13 条、筛出近 24 小时星主发言 0 条，未执行微信注入；LaunchAgent 仍加载并保持每天 12:00、18:00。Python AST、Shell 语法和 `git diff --check` 通过；首次自然调度及微信实收待观察。
+
+- 2026-10-18 16:06（新 Mac／仅 macOS）：按散帅要求将额度查询的唯一入口切换至全局 `quota-usage` Skill；项目规则、README、智谱模板、定时任务说明和定时包装器均指向 `/Users/mac/.codex/skills/quota-usage/scripts/query.py`，Claude 项目 Skill 链接改指全局 Skill，旧本地入口改为迁移说明。Skill `--help`、Python AST、Node 语法、Shell 语法、链接解析和 `git diff --check` 验证通过；未查询额度或触发推送。
+
+- 2026-10-18 11:24（新 Mac／仅 macOS）：按散帅要求将手动与定时额度查询合并到 `quota-usage` 唯一入口；每日包装器调用 `--all`，单项手动查询调用同一入口的 `--glm`／`--codex`。手动 Skill 命令与 launchd 包装器均使用 `/Users/mac/homebrew/bin/python3`（Python 3.14.8）。Python AST、Node 语法、Shell 语法、Skill YAML frontmatter 解析和 `git diff --check` 通过。获授权在工具沙箱外调用统一入口 `--all`，智谱和 Codex 两张卡片均成功生成，未注入或推送。Skill Creator 校验器因当前 Python 缺少 PyYAML 未能运行。
+
+- 2026-10-18 10:51（新 Mac／仅 macOS）：按散帅要求明确额度查询的回复约定：手动查询成功只返回本次智谱／Codex 卡片，出错时才返回脱敏错误；每日合并任务成功只推两张卡片，失败不推送部分或旧结果，现行脚本仅记录脱敏错误日志。同步更新 AGENTS、README、固定模板、两项 Skill 与定时任务说明；`git diff --check` 通过，未运行查询或触发推送。
+
+- 2026-10-18 10:17（新 Mac／仅 macOS）：按散帅要求将每天 09:00 的额度任务扩展为依次调用既有 `glm-stats` 与 `manage-codex-usage` 查询脚本，并把智谱、Codex 两张卡片合并为一次 injection；任一查询失败、输出无效或超时都不入队且不重试。任务保持原 09:00 LaunchAgent，无需重载；首次合并调度与微信实收待观察。Shell 语法、Python AST、文档差异和 `git diff --check` 验证通过；未手动查询或触发推送。
+
+- 2026-10-18 10:10（新 Mac／仅 macOS）：按散帅要求将每日打卡提醒从每天 08:00 调整为 06:00；更新源 plist 与 LaunchAgents 运行副本，卸载并重新加载服务。`launchctl print` 确认 `gui/501` 的日历触发为 Hour 6／Minute 0，`runs=0`、`RunAtLoad` 关闭；源与运行 plist 均通过 `plutil -lint` 且内容一致，`git diff --check` 通过。未手动触发提醒。
+
+- 2026-10-18 10:01（新 Mac／macOS）：百度页经 OpenCLI 提取成功；知识星球页显示登录态，`groups` 与 `topics` 读取成功。`whoami` 的 `/v2/users/self` 检查单独返回 `AUTH_REQUIRED`；一次 `limit=50` 返回 14001，`limit=20` 成功，此前 1059 本次未复现。星主作者标识为 `stormzhang`；脚本只读筛选最近 24 小时，实际查询 20 条、星主发言 0 条，未触发微信注入。Python／Shell 语法、plist 校验通过；源 plist 与运行副本一致。`launchctl print gui/501/com.sanshuai.wechat-agent-bot.zsxq-brief` 确认 12:00、18:00 触发、`runs=0`、`RunAtLoad` 关闭。
+
+- 2026-10-18 09:38（新 Mac／macOS）：通过 OpenCLI 只读列出星球并确认目标主星「帅张和他的朋友们」，但话题读取返回平台错误 1059（不支持非官方工具），不能继续用 OpenCLI 提取帖子。知识星球官方 Skill 的安装指南要求全局安装 `zsxq-cli` 与 Skill，再由用户完成 OAuth；本机均未安装，未创建或加载星球简报任务。临时 OpenCLI 标签和会话已关闭；每天 08:00 与 09:00 的既有任务未改动。
 
 - 2026-10-17 21:04（Win10）：清理 Git 工作区临时文件记录。删除可重新生成且未被 Git 跟踪的 `tmp_ma.py`、`tmp_ma.json`、`tmp_ma2.json`；将任务临时目录 `.tmp/` 加入 `.gitignore`，保留其中来源较早、用途不一的现有内容，不做整目录删除。验证：三个根目录临时文件均不存在，`.tmp/` 命中项目忽略规则且不再出现在 `git status`。
 
@@ -80,21 +100,3 @@
 - 2026-10-17 08:34（新 Mac／macOS）：散帅确认 Codex 微信验收通过，微信端实收验收完成。该确认不覆盖实际 Bot 会话的工作目录／规则读取与安全边界专项验收；Win10 未验证。
 
 - 2026-10-17 08:29（新 Mac／macOS）：ACP initialize／session/new 与真实模型响应通过，返回 `model=gpt-6-luna`、`reasoning_effort=medium`、`mode=workspace-write`、`end_turn`。现有 Bot 存活时启动入口正确拒绝重复启动；Claude PID `88657` 及两个子进程退出后，Codex PID `28593` 单实例运行，配置／构建指纹通过，工作目录与隐藏思考参数正确，微信登录复用与轮询启动标记存在，无新增 Fatal／过期／轮询错误。发送故障与待取回相关 10 项测试通过，Shell／Python 语法检查通过；微信实收及专项场景未验证。
-
-- 2026-10-05 17:56（新 Mac／macOS）：按散帅要求通过固定本地入口启动 Claude 微信 Bot；构建指纹与单实例检查通过，daemon status 为 Running（PID 22596），系统进程核对仅一个 Node 微信 Bot 实例，带 `--hide-thoughts` 和本项目工作目录。未配置开机自启；本次微信实际回传尚未验证。
-
-- 2026-10-03 12:38（新 Mac／macOS）：智谱新模板及新增进度条 4 组回归测试通过，覆盖满格／空格、小数、缺失窗口及查询失败保护；定时包装首行校验保持兼容，git diff --check 通过。散帅确认本次 Bot 启动后收到微信回传；最新额度查询与一次注入成功，新增发送审计无错误，散帅确认微信实收和样式验收通过。首次自然 09:00 调度仍未观察。
-
-- 2026-10-02 21:11（新 Mac／macOS）：launchctl print 确认 hot-news 服务不存在；源 plist 已删除，LaunchAgents 无对应运行副本，当前任务清单无热点新闻条目；其余 4 份 plist 保留，git diff --check 通过。
-
-- 2026-10-02 21:04（新 Mac／macOS）：提交前核对 AGENTS、README、ROADMAP、Claude 部署说明和智谱固定模板；模板文档与脚本一致，新增文档指针存在，git diff --check 通过。本次提交仅包含文档，不包含被忽略的本机脚本、构建、Skill 或凭据。
-
-- 2026-10-02 20:57（新 Mac／macOS）：固定模板示例与当前 renderCard 输出逐字比对通过；文档指针均存在、git diff --check 通过。仅固化模板约定，未修改查询逻辑、调度或追加推送。
-
-- 2026-10-02 20:56（新 Mac／macOS）：智谱新模板使用上次查询数值生成文本预览；4 组回归测试通过，0%／100%、小数进度条、缺失字段均正确，固定卡片首行保持兼容定时包装，git diff --check 通过。微信端新样式未另行验收。
-
-- 2026-10-02 20:54（新 Mac／macOS）：散帅明确授权即时推送一次后，通过 launchctl kickstart 触发智谱任务；launchd runs=1、last exit code=0，任务错误日志为空。触发时间之后发送审计新增一条 success、ret=null、errorType=null，无失败记录。未重复触发；手机端到达待散帅确认，首次自然 09:00 调度尚未观察。
-
-- 2026-10-02 20:51（新 Mac／macOS）：真实智谱只读查询通过，返回 Lite 套餐及 5 小时／每周／MCP 月度额度和重置时间；Skill 官方校验器通过，配置权限为 600；launchctl print 确认 gui/501 下任务已加载、calendarinterval 为 Hour 9／Minute 0，macOS 时区 CST +0800，源／运行 plist 一致。任务 runs=0，未执行即时推送；git diff --check 通过。
-
-- 2026-10-02 20:45（新 Mac／macOS）：glm-stats 隔离测试覆盖 0%／100% 用量、窗口顺序、未知／缺失字段、401／403／429／500、非 JSON、业务拒绝、域名与文件权限校验，4 组通过；包装失败／非法产物均不调用 inject。5 份 plist 通过 plutil，重启脚本身份正反例通过，shell／Node 语法检查通过。未使用真实 Key 或加载任何新增 LaunchAgent。
