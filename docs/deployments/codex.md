@@ -53,7 +53,7 @@ python3 /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/verify-codex.py
 
 ### 2026-10-17 09:31 推理强度更新（仅 macOS）
 
-- 按散帅要求由 `medium` 改为 `max`，模型仍为 `gpt-6-luna`；专用配置、本地指纹和验证脚本已同步，不修改全局 Codex 配置。
+- 按火球要求由 `medium` 改为 `max`，模型仍为 `gpt-6-luna`；专用配置、本地指纹和验证脚本已同步，不修改全局 Codex 配置。
 - 隔离 ACP 会话返回 `gpt-6-luna[max]`、`reasoning_effort=max`，真实提示响应匹配且正常 `end_turn`。
 - 旧 Codex Bot PID `28593` 及所属 15 个后代进程退出后，重新通过固定入口启动 PID `33846`；构建／配置指纹、单实例、工作目录与 `--hide-thoughts` 检查通过。
 - 重启后确认微信登录复用、轮询启动，无新增 Fatal、会话过期或轮询错误；本轮未发送微信测试消息，`max` 重启后的微信实收待确认。
@@ -64,7 +64,7 @@ python3 /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/verify-codex.py
 - ACP initialize／session/new 返回 `gpt-6-luna[medium]`，配置选项分别为 `model=gpt-6-luna`、`reasoning_effort=medium`、`mode=workspace-write`；真实提示响应匹配且正常结束。
 - 原 Claude 运行时，Codex 启动入口按预期拒绝重复启动。旧 Claude Bot PID `88657` 及两个子进程退出后，Codex Bot PID `28593` 启动；确认单实例、专用配置、本项目工作目录与 `--hide-thoughts`。
 - 新增日志范围的脱敏标记确认微信登录复用、消息轮询启动，无 Fatal、会话过期或轮询错误；这只反映本次检查时状态。
-- 微信发送与待取回相关 10 项回归通过，Shell／Python 语法检查通过。散帅随后确认 Codex 微信验收通过；实际 Bot 会话的规则读取与安全边界专项验收尚待完成。
+- 微信发送与待取回相关 10 项回归通过，Shell／Python 语法检查通过。火球随后确认 Codex 微信验收通过；实际 Bot 会话的规则读取与安全边界专项验收尚待完成。
 
 ## Win10 部署
 
@@ -104,7 +104,13 @@ Win10 子进程清理风险见官方 [Issue #71](https://github.com/formulahendr
 - 项目内固定安装 `wechat-acp@0.10.0` 与 `@agentclientprotocol/codex-acp@2.2.2`；启动入口校验文件存在、精确版本和专用配置，配置漂移时直接失败。
 - 使用适配器自带 Codex CLI，以 `gpt-6-luna`、`model_reasoning_effort=max`、只读沙箱和临时会话发起真实模型请求，响应成功；该验证不发送微信，也不修改全局 Codex 配置。
 - 后台 daemon 已由固定入口启动，进程命令行确认本项目工作目录、维护版 Codex ACP raw command 与 `--hide-thoughts`，微信登录复用并开始轮询；无新增启动错误。
-- 本轮未主动发送微信测试消息。微信实收、实际 ACP Bot 会话中的工作目录／规则读取和安全边界仍待散帅从微信发消息验收；未配置开机自启。
+- 本轮未主动发送微信测试消息。微信实收、实际 ACP Bot 会话中的工作目录／规则读取和安全边界仍待火球从微信发消息验收；未配置开机自启。
+
+### Google Calendar 插件（仅 Win10）
+
+- 2026-10-18 通过 Codex 官方市场安装 `google-calendar@openai-curated-remote` `1.2.7`，由火球本人完成 Google OAuth；凭据不进入项目文件。
+- 官方插件安装到用户级 Codex 环境，安装后须新开 Codex 会话加载工具。全局 Codex CLI `0.163.0` 与本项目固定 Codex CLI `0.160.1` 均以临时只读会话成功调用 `codex_apps/google_calendar.list_calendars`，测试未创建、修改或删除事件，也未输出日程正文。
+- 2026-10-18 17:26 按火球授权重启 Win10 微信 Bot：旧 PID `17364` 的项目进程树完整退出后，由固定入口启动 PID `19636`；登录复用、微信轮询恢复，启动段无 Fatal。微信端自然语言触发与实收尚未单独验收。涉及创建、修改或删除日程时，继续遵守项目的外部写入与确认规则。
 
 ## 完成标准
 

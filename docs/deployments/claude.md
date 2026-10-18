@@ -25,9 +25,9 @@
 
 本机 `wechat-acp` 固定上游提交 `4b787a5893d879005a6f0a7ebcf9f29ac033a607`，已重新实现端点级超时处理、发送响应校验及基础脱敏审计：仅 `getupdates` 超时返回空轮询，发送超时抛错；发送响应允许缺省 `ret`，显式非零值或非法响应进入失败路径；响应体读取纳入超时预算。复用上游现有同 `client_id` 重试及 `/acp-more` 待取回机制。旧 Mac 完整补丁未保存在 Git，本次不宣称恢复旧 `sent/pending/unknown` 传播与完整审计字段。
 
-本地构建和适配器位于 README 定义的忽略目录，`scripts/wechat-acp/build-manifest.json` 保存源码与构建指纹。恢复方式为重新获取固定提交、应用本机修复、安装固定适配器、构建并通过验证后重新生成指纹；不能直接从 Git 克隆后启动。启动与停止继续使用下文项目内入口，不配置 Bot 开机自启。旧定时任务随后按散帅授权逐项重建，当前优先智谱额度；状态以 ROADMAP 和本机 scripts/cron-tasks/README.md 为准。
+本地构建和适配器位于 README 定义的忽略目录，`scripts/wechat-acp/build-manifest.json` 保存源码与构建指纹。恢复方式为重新获取固定提交、应用本机修复、安装固定适配器、构建并通过验证后重新生成指纹；不能直接从 Git 克隆后启动。启动与停止继续使用下文项目内入口，不配置 Bot 开机自启。旧定时任务随后按火球授权逐项重建，当前优先智谱额度；状态以 ROADMAP 和本机 scripts/cron-tasks/README.md 为准。
 
-本次微信登录已完成，后台轮询已启动；2026-10-02 20:36 散帅确认微信发送消息后收到 Bot 回传，基础收发链路验收通过。工作目录、规则读取与安全边界专项消息未另行验收。全量测试 219 项中 218 项通过、1 项 Windows 专属跳过；隔离发送测试 10 项通过；Claude ACP initialize 和 session/new 通过。
+本次微信登录已完成，后台轮询已启动；2026-10-02 20:36 火球确认微信发送消息后收到 Bot 回传，基础收发链路验收通过。工作目录、规则读取与安全边界专项消息未另行验收。全量测试 219 项中 218 项通过、1 项 Windows 专属跳过；隔离发送测试 10 项通过；Claude ACP initialize 和 session/new 通过。
 
 ### 目标与边界
 
@@ -51,10 +51,10 @@ npx --version
 通过标准：
 
 - 当前目录是本仓库根目录。
-- 工作区没有未提交改动；如果有，停止部署并向散帅报告具体文件，不覆盖。
+- 工作区没有未提交改动；如果有，停止部署并向火球报告具体文件，不覆盖。
 - `claude --version` 正常输出版本；Node.js 不低于 22。
 
-如果 Claude 未安装、未登录或 Node.js 低于 22，只报告缺口。安装、登录或升级会改变软件／登录状态，必须另行说明并等待散帅确认；不得直接执行。
+如果 Claude 未安装、未登录或 Node.js 低于 22，只报告缺口。安装、登录或升级会改变软件／登录状态，必须另行说明并等待火球确认；不得直接执行。
 
 ### 2. 同步远程项目
 
@@ -64,7 +64,7 @@ git status --short --branch
 git log -1 --oneline --decorate
 ```
 
-通过标准：本地分支与 `origin/main` 一致，工作区干净。若仓库尚未克隆，先让散帅确认目标目录，再 `git clone`。
+通过标准：本地分支与 `origin/main` 一致，工作区干净。若仓库尚未克隆，先让火球确认目标目录，再 `git clone`。
 
 ### 3. 核验本地修复构建与 Claude ACP 入口
 
@@ -85,7 +85,7 @@ macOS 修复上线后不得用 `npx`、`@latest` 或 `/Users/mac/node_modules/.b
 
 ### 4. 首次启动与登录
 
-执行前必须向散帅说明具体动作、影响范围、潜在风险与恢复方式，并取得一次性明确确认。确认后在仓库根目录执行。
+执行前必须向火球说明具体动作、影响范围、潜在风险与恢复方式，并取得一次性明确确认。确认后在仓库根目录执行。
 
 首次登录需要前台运行时，直接使用已验证的项目内构建；`--hide-thoughts` 让 wechat-acp 不在微信端转发 Agent 的思考过程，发送审计写入项目忽略目录。
 
@@ -97,7 +97,7 @@ node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js --agent claude --cwd 
 
 随后：
 
-1. 若终端出现二维码，让散帅用微信扫描；若直接显示 `Starting message polling...` 说明已复用 token，无需扫码。
+1. 若终端出现二维码，让火球用微信扫描；若直接显示 `Starting message polling...` 说明已复用 token，无需扫码。
 2. 不复制其他机器的 `.wechat-acp` 目录和 token。
 3. 保持前台进程运行，先完成下一步验收。
 
@@ -123,7 +123,7 @@ node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js --agent claude --cwd 
 如果我要你删除文件，你应该在执行前做什么？只回答规则，不要执行。
 ```
 
-预期：先说明具体动作、目标、风险、影响和恢复方式，并等待散帅明确确认。
+预期：先说明具体动作、目标、风险、影响和恢复方式，并等待火球明确确认。
 
 ```text
 只回复：macOS Claude 微信 Bot 基础链路验证通过
@@ -135,7 +135,7 @@ node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js --agent claude --cwd 
 
 ### 6. 切换后台 daemon
 
-基础验收通过后，`Ctrl+C` 停止前台进程。后台 daemon 属于常驻进程，启动前必须再次向散帅说明风险并取得一次性确认，随后执行。
+基础验收通过后，`Ctrl+C` 停止前台进程。后台 daemon 属于常驻进程，启动前必须再次向火球说明风险并取得一次性确认，随后执行。
 
 macOS daemon 只有一个启动入口；它会校验固定源码基线、构建指纹和版本，缺失或不匹配时直接失败，不回退到官方未修复包：
 
@@ -160,7 +160,7 @@ node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js status  # 查看状�
 node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js stop    # 停止 daemon
 ```
 
-强制重新扫码会替换登录状态，必须先取得散帅确认：
+强制重新扫码会替换登录状态，必须先取得火球确认：
 
 ```bash
 export WECHAT_ACP_SEND_AUDIT_FILE=/Users/mac/workspace/wechat-agent-bot/runtime-data/send-audit/send-audit.jsonl
@@ -171,7 +171,7 @@ node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js --agent claude --hide
 
 ### 故障排查（macOS）
 
-- `claude` 命令不可用：仅执行 `claude --version` 收集非敏感摘要；不要重装 Claude，向散帅报告 PATH 或安装健康检查结果。
+- `claude` 命令不可用：仅执行 `claude --version` 收集非敏感摘要；不要重装 Claude，向火球报告 PATH 或安装健康检查结果。
 - 本地修复构建缺失或校验失败：停止部署，运行 `bash scripts/wechat-acp/verify-send-failure.sh` 收集非敏感摘要；不得回退到 `npx` 或全局官方包后声称修复仍生效。
 - Node.js 版本不足：Claude ACP 适配器当前要求 Node.js ≥ 22；不要自行升级，报告当前版本并等待确认。
 - ACP session 创建失败：依次核对 `npx -y wechat-acp@0.10.0 agents` 是否包含 `claude`、仓库路径是否真实且用双引号包裹、终端错误摘要指向 Claude 认证/网络/ACP 入口。
@@ -182,7 +182,7 @@ node runtime-data/vendor/wechat-acp/dist/bin/wechat-acp.js --agent claude --hide
 
 ### 回滚到官方 0.10.0（仅故障恢复）
 
-若本地构建导致正常收发失败，先停止当前 daemon，再用 `/Users/mac/node_modules/.bin/wechat-acp --agent claude --cwd /Users/mac/workspace/wechat-agent-bot --hide-thoughts --daemon` 恢复官方 `0.10.0`。停止、启动和回滚都必须先取得散帅一次性确认。回滚会重新引入“发送超时可能被当成成功”的已知风险，只用于恢复服务，不代表本问题已解决。
+若本地构建导致正常收发失败，先停止当前 daemon，再用 `/Users/mac/node_modules/.bin/wechat-acp --agent claude --cwd /Users/mac/workspace/wechat-agent-bot --hide-thoughts --daemon` 恢复官方 `0.10.0`。停止、启动和回滚都必须先取得火球一次性确认。回滚会重新引入“发送超时可能被当成成功”的已知风险，只用于恢复服务，不代表本问题已解决。
 
 ---
 
@@ -213,12 +213,12 @@ npx --version
 通过标准：
 
 - 当前目录是本仓库根目录。
-- 工作区没有未提交改动；如果有，停止部署并向散帅报告具体文件，不覆盖。
+- 工作区没有未提交改动；如果有，停止部署并向火球报告具体文件，不覆盖。
 - 远程仓库是 `https://github.com/nbh847/wechat-agent-bot.git`。
 - `claude --version` 正常输出版本，`claude doctor` 没有阻塞错误。
 - Node.js 不低于 22。虽然 `wechat-acp` 本身只要求 Node.js 20，但当前 Claude ACP 适配器要求 Node.js ≥ 22。
 
-如果 Claude 未安装、未登录或 Node.js 低于 22，只报告缺口。安装、登录或升级会改变软件／登录状态，必须另行说明并等待散帅确认；不得直接执行。
+如果 Claude 未安装、未登录或 Node.js 低于 22，只报告缺口。安装、登录或升级会改变软件／登录状态，必须另行说明并等待火球确认；不得直接执行。
 
 ### 2. 同步远程项目
 
@@ -228,7 +228,7 @@ git status --short --branch
 git log -1 --oneline --decorate
 ```
 
-通过标准：本地分支与 `origin/main` 一致，工作区干净。若仓库尚未克隆，先让散帅确认目标目录，再 `git clone`。
+通过标准：本地分支与 `origin/main` 一致，工作区干净。若仓库尚未克隆，先让火球确认目标目录，再 `git clone`。
 
 ### 3. 核验 wechat-acp CLI
 
@@ -242,13 +242,13 @@ npm view @agentclientprotocol/claude-agent-acp version engines --json
 
 - 版本输出为 `0.10.0`。
 - agent 列表包含 `claude`。
-- Claude ACP 适配器版本仍为 `0.69.0`，Node.js 要求仍为 `>=22`。如果版本或要求变化，停止部署并向散帅报告，不按旧文档继续。
+- Claude ACP 适配器版本仍为 `0.69.0`，Node.js 要求仍为 `>=22`。如果版本或要求变化，停止部署并向火球报告，不按旧文档继续。
 
 `claude` preset 会通过 npm 启动 `@agentclientprotocol/claude-agent-acp`，不是直接把普通 Claude 交互终端当作 ACP Agent。不要自行改成其他 raw command。
 
 ### 4. 首次启动与登录
 
-首次启动会展示微信二维码，并把 token、同步状态、日志和收件箱数据写入 `%USERPROFILE%\.wechat-acp`。执行前必须向散帅说明风险并取得一次性明确确认，随后在仓库根目录执行；`--hide-thoughts` 让 wechat-acp 不在微信端转发 Agent 的思考过程：
+首次启动会展示微信二维码，并把 token、同步状态、日志和收件箱数据写入 `%USERPROFILE%\.wechat-acp`。执行前必须向火球说明风险并取得一次性明确确认，随后在仓库根目录执行；`--hide-thoughts` 让 wechat-acp 不在微信端转发 Agent 的思考过程：
 
 ```powershell
 $RepoRoot = (Get-Location).Path
@@ -257,7 +257,7 @@ npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --hide-thoughts
 
 随后：
 
-1. 让散帅使用微信扫描终端二维码（或复用已有 token）。
+1. 让火球使用微信扫描终端二维码（或复用已有 token）。
 2. 不复制 macOS 或其他机器的 `.wechat-acp` 目录和 token。
 3. 保持 PowerShell 前台进程运行，先完成下一步验收。
 
@@ -283,7 +283,7 @@ npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --hide-thoughts
 如果我要你删除文件，你应该在执行前做什么？只回答规则，不要执行。
 ```
 
-预期：先说明具体动作、目标、风险、影响和恢复方式，并等待散帅明确确认。
+预期：先说明具体动作、目标、风险、影响和恢复方式，并等待火球明确确认。
 
 ```text
 只回复：Win10 Claude 微信 Bot 基础链路验证通过
@@ -295,7 +295,7 @@ npx -y wechat-acp@0.10.0 --agent claude --cwd "$RepoRoot" --hide-thoughts
 
 ### 6. 切换后台 daemon
 
-基础验收通过后，`Ctrl+C` 停止前台进程。后台 daemon 属于常驻进程，启动前必须再次向散帅说明风险并取得一次性确认，随后执行：
+基础验收通过后，`Ctrl+C` 停止前台进程。后台 daemon 属于常驻进程，启动前必须再次向火球说明风险并取得一次性确认，随后执行：
 
 ```powershell
 $RepoRoot = (Get-Location).Path
@@ -342,7 +342,7 @@ grep -n "Agent prompt error\|→ failed" "C:/Users/ronnie/.wechat-acp/wechat-acp
 
 ### 故障排查（Win10）
 
-- `claude` 命令不可用：仅执行 `claude --version` 和 `claude doctor` 收集非敏感摘要；不要重装 Claude，向散帅报告 PATH 或安装健康检查结果。
+- `claude` 命令不可用：仅执行 `claude --version` 和 `claude doctor` 收集非敏感摘要；不要重装 Claude，向火球报告 PATH 或安装健康检查结果。
 - Node.js 版本不足：Claude ACP 适配器当前要求 Node.js ≥ 22；不要自行升级，报告当前版本并等待确认。
 - ACP session 创建失败：依次核对 `claude doctor` 是否有阻塞错误、`npx -y wechat-acp@0.10.0 agents` 是否包含 `claude`、仓库路径是否真实且用双引号包裹、终端错误摘要指向 Claude 认证/网络/ACP 适配器。
 - 微信没有回复：`npx -y wechat-acp@0.10.0 status`；若 daemon 未运行先报告，不擅自启动。
@@ -355,7 +355,7 @@ grep -n "Agent prompt error\|→ failed" "C:/Users/ronnie/.wechat-acp/wechat-acp
 
 ## 完成标准
 
-只有同时满足以下条件，才向散帅报告部署完成：
+只有同时满足以下条件，才向火球报告部署完成：
 
 - 本地仓库与 `origin/main` 一致且工作区干净。
 - Claude 与 Node.js 前提检查通过。

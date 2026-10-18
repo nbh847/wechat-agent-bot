@@ -41,11 +41,11 @@ npx --version
 通过标准：
 
 - 当前目录是本仓库根目录。
-- 工作区没有未提交改动；如果有，停止部署并向散帅报告具体文件，不覆盖。
+- 工作区没有未提交改动；如果有，停止部署并向火球报告具体文件，不覆盖。
 - `codebuddy --version` 正常输出版本；`codebuddy --help | grep -i acp` 至少能看到 `--acp`。
 - Node.js 版本不低于 22。
 
-如果 CodeBuddy 未安装、未提供 `--acp`，或 Node.js 低于 22，只报告缺口。安装、登录或升级会改变软件／登录状态，必须另行说明并等待散帅确认；不得直接执行。
+如果 CodeBuddy 未安装、未提供 `--acp`，或 Node.js 低于 22，只报告缺口。安装、登录或升级会改变软件／登录状态，必须另行说明并等待火球确认；不得直接执行。
 
 ### 2. 同步远程项目
 
@@ -57,7 +57,7 @@ git log -1 --oneline --decorate
 
 通过标准：本地分支与 `origin/main` 一致，工作区干净，能读取本文及根目录必读文件。
 
-若仓库尚未克隆，先让散帅确认目标目录，再 `git clone`。
+若仓库尚未克隆，先让火球确认目标目录，再 `git clone`。
 
 ### 3. 核验 wechat-acp CLI 与 CodeBuddy ACP 入口
 
@@ -79,9 +79,9 @@ codebuddy --acp --acp-transport stdio --help 2>&1 | head -5
 
 登录 token 写在 `~/.wechat-acp/token.json`。**若本机已存在有效 token（例如此前用 Claude 部署过同一微信 Bot），启动会直接复用，无需扫码。** 仅当 token 失效或首次部署时才需扫码。
 
-执行前必须向散帅说明具体动作、影响范围、潜在风险与恢复方式，并取得一次性明确确认。确认后在仓库根目录执行。
+执行前必须向火球说明具体动作、影响范围、潜在风险与恢复方式，并取得一次性明确确认。确认后在仓库根目录执行。
 
-macOS 推荐的启动方式（散帅实际用法）：raw command **必须带 `--acp`**（`--agent "codebuddy --acp"`），写裸词 `--agent codebuddy` 会启动 CodeBuddy 普通交互终端、ACP 握手失败、消息无反应。该命令**不带 `--cwd`，依赖当前工作目录**，因此必须先 `cd` 到仓库根目录；`--hide-thoughts` 让 wechat-acp 不在微信端转发 Agent 的思考过程。
+macOS 推荐的启动方式（火球实际用法）：raw command **必须带 `--acp`**（`--agent "codebuddy --acp"`），写裸词 `--agent codebuddy` 会启动 CodeBuddy 普通交互终端、ACP 握手失败、消息无反应。该命令**不带 `--cwd`，依赖当前工作目录**，因此必须先 `cd` 到仓库根目录；`--hide-thoughts` 让 wechat-acp 不在微信端转发 Agent 的思考过程。
 
 ```bash
 cd /Users/mac/workspace/wechat-agent-bot
@@ -97,7 +97,7 @@ npx -y wechat-acp@0.10.0 --agent "codebuddy --acp" --cwd "$RepoRoot" --hide-thou
 
 随后：
 
-1. 若终端出现二维码，让散帅用微信扫描；若直接显示 `Starting message polling...` 说明已复用 token，无需扫码。
+1. 若终端出现二维码，让火球用微信扫描；若直接显示 `Starting message polling...` 说明已复用 token，无需扫码。
 2. 不复制其他机器的 `.wechat-acp` 目录和 token。
 3. 保持前台进程运行，先完成下一步验收。
 
@@ -123,7 +123,7 @@ npx -y wechat-acp@0.10.0 --agent "codebuddy --acp" --cwd "$RepoRoot" --hide-thou
 如果我要你删除项目里的 ROADMAP.md，你应该在执行前做什么？只回答规则，不要执行。
 ```
 
-预期：先说明具体动作、目标、风险、影响和恢复方式，并等待散帅明确确认；不乱删文件。
+预期：先说明具体动作、目标、风险、影响和恢复方式，并等待火球明确确认；不乱删文件。
 
 ```text
 只回复：macOS CodeBuddy 微信 Bot 基础链路验证通过
@@ -135,9 +135,9 @@ npx -y wechat-acp@0.10.0 --agent "codebuddy --acp" --cwd "$RepoRoot" --hide-thou
 
 ### 6. 切换后台 daemon
 
-基础验收通过后，`Ctrl+C` 停止前台进程。后台 daemon 属于常驻进程，启动前必须再次向散帅说明风险并取得一次性确认，随后执行。
+基础验收通过后，`Ctrl+C` 停止前台进程。后台 daemon 属于常驻进程，启动前必须再次向火球说明风险并取得一次性确认，随后执行。
 
-通过标准：`status` 显示 daemon 正在运行。macOS 推荐的 daemon 启动（散帅实际命令）：
+通过标准：`status` 显示 daemon 正在运行。macOS 推荐的 daemon 启动（火球实际命令）：
 
 ```bash
 cd /Users/mac/workspace/wechat-agent-bot
@@ -168,7 +168,7 @@ npx -y wechat-acp status            # 查看状态
 npx -y wechat-acp stop              # 停止 daemon
 ```
 
-强制重新扫码会替换登录状态，必须先取得散帅确认：
+强制重新扫码会替换登录状态，必须先取得火球确认：
 
 ```bash
 npx -y wechat-acp@latest --agent "codebuddy --acp" --hide-thoughts --cwd /Users/mac/workspace/wechat-agent-bot --login
@@ -178,7 +178,7 @@ npx -y wechat-acp@latest --agent "codebuddy --acp" --hide-thoughts --cwd /Users/
 
 ### 故障排查（macOS）
 
-- `codebuddy` 命令不可用或没有 `--acp`：仅执行 `codebuddy --version` 和 `codebuddy --help | grep -i acp` 收集非敏感摘要；不要重装 CodeBuddy，向散帅报告 PATH 或安装健康检查结果。
+- `codebuddy` 命令不可用或没有 `--acp`：仅执行 `codebuddy --version` 和 `codebuddy --help | grep -i acp` 收集非敏感摘要；不要重装 CodeBuddy，向火球报告 PATH 或安装健康检查结果。
 - `wechat-acp` 不在 PATH：用 `npx -y wechat-acp@0.10.0 ...` 或绝对路径 `/Users/mac/node_modules/.bin/wechat-acp ...` 代替。
 - Node.js 版本不足：CodeBuddy ACP 当前要求 Node.js ≥ 22；不要自行升级，报告当前版本并等待确认。
 - ACP session 创建失败：依次核对 `codebuddy --acp` 能否解析、`npx -y wechat-acp@0.10.0 agents` 是否不含 `codebuddy`（确认走 raw command）、仓库路径是否真实且用双引号包裹、终端错误摘要指向 CodeBuddy 认证/网络/ACP 入口。
@@ -203,7 +203,7 @@ npx -y wechat-acp@latest --agent "codebuddy --acp" --hide-thoughts --cwd /Users/
 
 以下步骤在 PowerShell 中执行，`$RepoRoot = (Get-Location).Path` 代表仓库根目录：
 
-- 前提检查：`git status --short --branch`、`git remote -v`、`git log -1 --oneline --decorate`、`codebuddy --version`、`codebuddy --help | findstr acp`、`node --version`、`npm --version`、`npx --version`。工作区脏则停止并向散帅报告，不覆盖。
+- 前提检查：`git status --short --branch`、`git remote -v`、`git log -1 --oneline --decorate`、`codebuddy --version`、`codebuddy --help | findstr acp`、`node --version`、`npm --version`、`npx --version`。工作区脏则停止并向火球报告，不覆盖。
 - 同步远程：`git pull --ff-only` 并确认与 `origin/main` 一致。
 - 核验 CLI：`npx -y wechat-acp@0.10.0 --version`、`npx -y wechat-acp@0.10.0 agents`（应不含 `codebuddy`）、`codebuddy --acp --acp-transport stdio --help`。
 - 首次启动与登录：确认后执行前台：
@@ -213,7 +213,7 @@ npx -y wechat-acp@latest --agent "codebuddy --acp" --hide-thoughts --cwd /Users/
   npx -y wechat-acp@0.10.0 --agent "codebuddy --acp" --cwd "$RepoRoot"
   ```
 
-  若需扫码，让散帅扫终端二维码；若显示 `Starting message polling...` 说明复用 token。
+  若需扫码，让火球扫终端二维码；若显示 `Starting message polling...` 说明复用 token。
 - 微信端验收：按 macOS 第 5 步的 4 条消息执行，预期工作目录为 `D:\workspace\wechat-agent-bot`（实际路径替换）、规则链读 `AGENTS.md`「敏感操作确认」、删除红线不执行、指定句一字不差回传。
 - 切换后台 daemon：确认后执行：
 
@@ -248,7 +248,7 @@ npx -y wechat-acp@0.10.0 stop       # 停止 daemon
 
 ## 完成标准
 
-只有同时满足以下条件，才向散帅报告部署完成：
+只有同时满足以下条件，才向火球报告部署完成：
 
 - 本地仓库与 `origin/main` 一致且工作区干净。
 - CodeBuddy 与 Node.js 前提检查通过。

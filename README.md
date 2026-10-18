@@ -1,12 +1,16 @@
 # WeChat Agent Bot Workspace
 
-本仓库是散帅的**个人 AI 助手工作区**，用于替代 OpenClaw（小龙虾）作为本地 Agent 的统一入口和个人知识管理空间。
+本仓库是火球的**个人 AI 助手工作区**，用于替代 OpenClaw（小龙虾）作为本地 Agent 的统一入口和个人知识管理空间。
 
 ## 项目定位
 
 - **核心目标**：通过 `wechat-acp` 实现微信消息驱动的本地 AI Agent，将个人知识管理、待办事项、任务执行整合在一个受控工作区内；本项目中「入库」指操作 Memex 知识库，授权范围和流程见 [`AGENTS.md`](AGENTS.md)。
 - **替代关系**：本仓库替代 OpenClaw（`~/.qclaw/`）成为主要工作空间；QClow 保留历史数据和部分技能，新活动逐步迁移到此。
 - **数据范围**：个人待做事项、观影清单、旅行目标、研究项目、项目进度、规则文件和必要调研资料。
+
+## 项目功能索引
+
+既有功能、自然语言触发词、术语别名、Skill、定时任务和原始资料入口见 [docs/project-index.md](docs/project-index.md)。索引用于快速识别和定位；执行步骤与当前机器状态分别以对应 Skill、部署文档和 [ROADMAP.md](ROADMAP.md) 为准。
 
 ## 工作方式
 
@@ -52,6 +56,7 @@ wechat-agent-bot/
 │       ├── README.md  # 任务清单与约定
 │       └── launchd/   # plist 源文件（加载副本在 ~/Library/LaunchAgents/）
 ├── docs/
+│   ├── project-index.md       # 功能、Skill、定时任务与术语关键词总索引
 │   ├── deployments/           # 各 Agent 部署手册（每篇含 macOS/Win10 双节；新增 Agent 复制模板加一篇）
 │   │   ├── codebuddy.md       # CodeBuddy
 │   │   ├── claude.md          # Claude
@@ -64,7 +69,7 @@ wechat-agent-bot/
     └── send-audit/           # 微信文本发送审计（脱敏 JSONL）
 ```
 
-`goals/` 只保存已确认方案在实施期的临时拆分，不是项目进度源。按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 命名；每个 goal 独立定义成功标准和验证方式。整组目标完成并将结果同步到 `ROADMAP.md` 后，经散帅确认再删除对应 initiative 目录。
+`goals/` 只保存已确认方案在实施期的临时拆分，不是项目进度源。按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 命名；每个 goal 独立定义成功标准和验证方式。整组目标完成并将结果同步到 `ROADMAP.md` 后，经火球确认再删除对应 initiative 目录。
 
 `personal/` 保存本机个人清单和想法，不进 Git，两台机器各自独立。`personal/watchlist/` 统一记录待看的电影、电视剧和纪录片；`personal/reading/` 记录待读书目；`personal/game/` 记录待玩游戏。清单按一项一份 Markdown 文件记录，使用英文短横线文件名；同一系列的多季合并在一条记录中。完成后更新原条目状态，不自动删除。
 
@@ -78,9 +83,9 @@ wechat-agent-bot/
 
 `runtime-data/claude-acp/`（仅 macOS）：新 Mac 部署使用的固定版本 Claude ACP 适配器及项目内依赖，不依赖运行时下载。与 vendor 构建一起保留，删除前需明确授权；不保存登录凭据。
 
-`runtime-data/vendor/wechat-acp/`：基于官方固定提交的 `wechat-acp` 源码工作副本，包含“发送失败假成功”的本地根因修复并先在 macOS 验证。项目直接运行使用这个固定构建，不修改 `/Users/mac/node_modules/wechat-acp`，也不以 `npx ...@latest` 作为修复后生产入口。复制到本目录后按 `runtime-data/` 清理规则处理；如需删除必须先经散帅单独批准。
+`runtime-data/vendor/wechat-acp/`：基于官方固定提交的 `wechat-acp` 源码工作副本，包含“发送失败假成功”的本地根因修复并先在 macOS 验证。项目直接运行使用这个固定构建，不修改 `/Users/mac/node_modules/wechat-acp`，也不以 `npx ...@latest` 作为修复后生产入口。复制到本目录后按 `runtime-data/` 清理规则处理；如需删除必须先经火球单独批准。
 
-`runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
+`runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经火球单独批准。
 
 `scripts/wechat-acp/`（双机通用目录，脚本按系统区分）：macOS 的 Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh`；Win10 的 Codex 使用 `start-codex-daemon.ps1` 与 `codex-config.win10.json`。各入口只调用本机固定版本依赖，找不到依赖时直接失败；Codex 固定使用 `gpt-6-luna`、`max` 和 `workspace-write`，不修改全局 Codex 配置。macOS 脚本继续校验构建、配置指纹与单实例；Win10 脚本拒绝配置漂移，并由 `wechat-acp` 的 PID 门禁防止重复 daemon。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
 
@@ -102,9 +107,9 @@ wechat-agent-bot/
 
 ## 安全边界
 
-当前 `wechat-acp` 会自动批准 ACP Agent 发出的权限请求。因此，仓库规则要求 Agent 在敏感操作前通过对话向散帅说明具体动作、目标、风险和影响，并等待一次性确认。
+当前 `wechat-acp` 会自动批准 ACP Agent 发出的权限请求。因此，仓库规则要求 Agent 在敏感操作前通过对话向火球说明具体动作、目标、风险和影响，并等待一次性确认。
 
-这属于 Agent 行为约束，不是强制权限隔离。没有独立权限代理时，不得把 ACP 的自动批准视为散帅已经确认。
+这属于 Agent 行为约束，不是强制权限隔离。没有独立权限代理时，不得把 ACP 的自动批准视为火球已经确认。
 
 ## 历史与迁移
 
