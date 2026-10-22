@@ -38,8 +38,9 @@ wechat-agent-bot/
 ├── ROADMAP.md         # 项目进度
 ├── goals/             # 本地临时执行目标（不进 Git，完成后经确认删除）
 ├── personal/          # 本机个人待做事项（不进 Git；各机器分别保存）
-│   ├── skills/        # 仅 macOS：旧版本机查询源码（不进 Git，不作为当前入口）
-│   │   └── quota-usage/ # 全局额度 Skill 的历史本地副本
+│   ├── skills/        # 仅 macOS：本机 Skill 与配套脚本（不进 Git）
+│   │   ├── quota-usage/ # 全局额度 Skill 的历史本地副本，不作为当前入口
+│   │   └── zsxq-raw-brief/ # 知识星球原文简报 Skill，供定时任务调用
 │   ├── daily-reminders.json # 仅 macOS：每日提醒事项清单
 │   ├── destination/   # 旅行目的地
 │   ├── game/          # 待玩或想玩的游戏
@@ -71,6 +72,8 @@ wechat-agent-bot/
 
 `personal/daily-reminders.json`（仅 macOS）：每日打卡提醒的数据源，使用 `version` 和 `items` 字段；每项包含稳定 `id`、提醒文本 `title` 与布尔值 `enabled`。定时脚本每次运行时重新读取此文件，增删改提醒只需编辑 JSON，不用修改脚本或重载调度。该文件位于被 Git 忽略的 `personal/`，两台机器各自保存。
 
+`personal/skills/zsxq-raw-brief/`（仅 macOS）：知识星球星主原文简报 Skill，包含 `SKILL.md` 和供 LaunchAgent 调用的脚本；脚本使用全局 `web-crawler` Skill 抓取并筛选近 24 小时星主帖子，保留原文，不做 AI 摘要。通过现有 `wechat-acp inject` 投递时，内容仍会经过 ACP Agent 转发；投递链路详见定时任务说明。该目录位于被 Git 忽略的 `personal/`，仅本机使用。
+
 ### 本地临时源码与运行数据（均不进 Git）
 
 `/Users/mac/.codex/skills/quota-usage/`（仅 macOS）：智谱 GLM Coding Plan 与 Codex 共用的全局额度查询 Skill。手动查询及每天 09:00 的定时任务都调用其 `scripts/query.py`，按 `--glm`、`--codex` 或 `--all` 获取原文卡片；同一份接口数据使用相同校验与渲染逻辑，实际额度和时间戳会随用量及重置变化。`personal/skills/quota-usage/` 保留旧版本地副本，不作为查询入口。Codex 按 Skill 通过当前登录 CLI 的 `account/rateLimits/read` 查询账号额度桶，不直接读取凭据、不创建模型会话、不主动发起登录或注销；额度不表示 API 现金余额，也不冒充 `gpt-6-luna max` 独享额度。查询失败只返回脱敏错误，不使用历史数据。
@@ -89,7 +92,7 @@ wechat-agent-bot/
 
 `scripts/cron-tasks/`（仅 macOS）：保存任务清单、执行脚本与 `launchd/` 中的 plist 源文件，运行副本位于 `/Users/mac/Library/LaunchAgents/`。`runtime-data/cron/` 保存本机任务日志与互斥锁，不进 Git；成功仅表示脚本完成，微信到达需单独核验。脚本或 Skill 数据源缺失时任务失败退出，不生成占位内容。日志不得记录消息正文、凭据或原始接口响应。来源未恢复的任务不加载；当前恢复状态见项目 ROADMAP 与本地任务清单。停止任务使用对应 label 的 `launchctl bootout`，保留项目源文件和日志；删除须明确授权。
 
-星球简报定时任务（仅 macOS）通过全局 `/Users/mac/.codex/skills/web-crawler/SKILL.md` 的知识星球 `feed` handler 抓取，并用 CDP 访问已登录的独立浏览器配置；任务细节见 `scripts/cron-tasks/README.md`。
+星球简报定时任务（仅 macOS）调用 `personal/skills/zsxq-raw-brief/` 中的 Skill 脚本；该脚本通过全局 `/Users/mac/.codex/skills/web-crawler/SKILL.md` 的知识星球 `feed` handler 抓取，并用 CDP 访问已登录的独立浏览器配置；任务细节见 `scripts/cron-tasks/README.md`。
 
 `runtime-data/cron/glm-credentials.json`（仅 macOS）：智谱只读查询专用配置，权限为 `600`，不进 Git；不得复制到 plist 或日志。`scripts/cron-tasks/setup-glm-credentials.command` 提供隐藏输入的本机录入入口，不改变 Claude Code 的认证配置。全局额度 Skill 在环境变量和用户标准配置均未指定时，可将此文件作为本项目的 macOS 回退配置；所有手动查询与定时任务均调用全局 Skill 入口。
 

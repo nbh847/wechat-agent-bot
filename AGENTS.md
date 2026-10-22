@@ -71,7 +71,7 @@
 - 密钥、token、密码和真实登录数据不得进入代码、日志或 Git。
 - 常规只读 Git 可直接执行；删除、回滚、rebase、改历史、push、force-push、tag 和 release 必须先确认。
 - Commit 信息使用中文描述和 `init:`、`feat:`、`fix:`、`refactor:`、`docs:` 或 `chore:` 前缀，不添加 `Co-Authored-By`。
-- **知识星球定时简报（仅 macOS）**：`scripts/cron-tasks/zsxq-brief.py` 必须使用全局 `/Users/mac/.codex/skills/web-crawler/SKILL.md` 的知识星球 `feed` handler 抓取数据；不得切回 OpenCLI 抓取或在项目脚本中另写网页抓取逻辑。运行与依赖说明见 `scripts/cron-tasks/README.md`。
+- **知识星球原文简报（仅 macOS）**：LaunchAgent 经 `scripts/cron-tasks/run-zsxq-brief.sh` 直接调用本地 `personal/skills/zsxq-raw-brief/scripts/run.py`；Skill 脚本每次读取其 `SKILL.md` 转发规则，并使用全局 `/Users/mac/.codex/skills/web-crawler/SKILL.md` 的知识星球 `feed` handler 抓取。兼容入口 `scripts/cron-tasks/zsxq-brief.py` 只转交给同一 Skill。正文不得交给 AI 摘要、概括或改写；不得切回 OpenCLI 抓取或另写网页抓取逻辑。现有 `wechat-acp inject --file` 仍经 ACP Agent 投递，无法保证传输层字节级原样直发。运行与依赖说明见 `scripts/cron-tasks/README.md`。
 - **额度查询（仅 macOS）**：智谱与 Codex 统一使用全局 `quota-usage` Skill，读取 `/Users/mac/.codex/skills/quota-usage/SKILL.md`，并依查询范围调用 `/Users/mac/.codex/skills/quota-usage/scripts/query.py`。手动查询与每天 09:00 定时任务必须调用同一全局入口，不得绕过 Skill 或调用项目旧实现；不得直接读取凭据、从会话 Token 数推算额度或使用历史数据。若沙箱拦截 Codex App Server，按宿主权限流程授权后重跑同一入口。
 - 智谱额度手动查询与定时推送统一使用 `docs/deployments/glm-usage-template.md` 的固定模板，由全局 `quota-usage` Skill 入口调用渲染脚本并原文返回；仅在散帅明确要求改版时变更。
 - **智谱与 Codex 额度回复**：手动查询成功时只返回本次额度卡片，不发送查询进度、执行过程或额外说明；只有查询报错时才返回脱敏错误，不使用旧数据。每日合并任务成功时只推送智谱与 Codex 两张卡片；任一查询失败、输出无效或超时都不发送部分结果，按任务约定记录脱敏错误。
