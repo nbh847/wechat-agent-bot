@@ -8,6 +8,8 @@
 
 - 2026-10-19（新 Mac／仅 macOS）：按散帅要求将知识星球定时简报改为本地 `zsxq-raw-brief` Skill 执行：LaunchAgent wrapper 直接调用 Skill 脚本，脚本每次读取 `SKILL.md` 中的转发规则，调用全局 `web-crawler` Skill 的 `feed` handler 抓取、筛选并生成帖子原文通知，不再要求 AI 摘要。同步项目规则、目录说明与定时任务手册。实际抓取、定时运行和微信实收待首次运行观察；`wechat-acp inject` 仍经 ACP Agent 转发，不能保证字节级原样直发。
 
+- 2026-10-17 21:33（Win10）：完成本机 Codex 微信 Bot 接入与后台启动。项目内固定安装 `wechat-acp@0.10.0`、`@agentclientprotocol/codex-acp@2.2.2`，使用 raw command 避开已弃用 preset；专用入口固定 `gpt-6-luna`、`model_reasoning_effort=max`、`workspace-write` 和 `--hide-thoughts`，并校验依赖版本与配置，不修改全局 Codex 设置。真实模型请求成功，daemon 单实例运行并开始微信轮询；微信实收和实际 Bot 会话专项验收仍在进行中，未配置开机自启。
+
 - 2026-10-17 15:52（新 Mac／macOS）：按散帅要求固化个人意向清单的触发与归档规则：明确的待看／想看归影视清单，待读／想读归书目清单，待玩／想玩归游戏清单；按内容类型优先判断，普通一次性行动事项仍沿用工作区级待办队列。已同步 AGENTS 与 README；未新增目录或自动跨机同步规则。验证：规则与 README 目录索引一致，`git diff --check` 通过。
 
 - 2026-10-17 15:45（新 Mac／macOS）：按散帅要求将本机个人影视待看清单统一收纳到 `personal/watchlist/`，并在 README 同步目录索引、用途、命名和完成后保留规则；空的 `personal/movie/` 已移除。本机新增一条含两季信息的纪录片记录，个人内容不进 Git，Win10 未同步。验证：索引与实际路径一致，旧目录不存在，新条目存在且被 Git 忽略，`git diff --check` 通过。
@@ -51,7 +53,7 @@
 
 - **2026-10-18（新 Mac／仅 macOS）统一额度查询**：智谱与 Codex 均按全局 `quota-usage` Skill 查询；手动请求和每天 09:00 定时任务调用 `/Users/mac/.codex/skills/quota-usage/scripts/query.py`，定时任务使用 `--all`。全局脚本入口与配置路径已核对，切换后的真实查询及定时推送仍待观察。受限工具沙箱若拦截 Codex App Server，须通过宿主权限流程重跑同一入口。Win10 未适配。
 
-- **2026-10-17（新 Mac／macOS）Codex Bot 专项验收**：实际 Bot 会话的工作目录／项目规则读取与安全边界专项消息仍待验收；Win10 不沿用本次 macOS 结论。未启用开机自启，未迁移 Claude 会话历史。
+- **2026-10-17（macOS／Win10）Codex Bot 专项验收**：macOS 的基础微信实收已通过；Win10 的固定依赖、真实模型请求、后台启动和轮询已通过，微信实收待散帅从微信发消息确认。两机实际 Bot 会话的工作目录／项目规则读取与安全边界专项消息仍待验收；均未启用开机自启，未迁移 Claude 会话历史。
 
 - **2026-10-02（新 Mac／仅 macOS）每日额度任务**：智谱额度的 LaunchAgent 每天 09:00 运行；包装器现调用全局 `/Users/mac/.codex/skills/quota-usage/scripts/query.py --all`，与手动单项查询共用 Skill。切换后的真实查询、首次合并推送与微信实收待观察；AI 日报和 Bot 每周重启仍未加载。
 
@@ -62,6 +64,8 @@
 - **OpenClaw（`~/.qclaw/`）个人数据迁移收尾**：macOS 侧 second-brain/QClaw 资产迁移已完成（见「已完成」），剩余待整理的残留或新增数据按要求逐步迁入 `personal/`，未明确发起前不擅自清理。
 
 ## 最近验证
+
+- 2026-10-22 20:54（新 Mac／仅 macOS）：拉取并合并 `origin/main`，解决 ROADMAP 中 macOS 星球原文简报与 Win10 Codex 接入记录的冲突；保留双方记录及机器归属，核对 README、Codex 部署说明与路线图状态一致。文档本地链接、冲突标记扫描和 `git diff --check` 通过；未复验 Win10 运行环境或发送微信。
 
 - 2026-10-22 20:50（新 Mac／仅 macOS）：提交前核对知识星球原文简报的规则、目录说明与本地执行入口；Python AST、wrapper Shell 语法、文档本地链接、Skill 入口存在性、Git 忽略规则及 `git diff --check` 通过。本次只提交三份文档，未执行抓取、微信注入或服务状态复验。
 
@@ -85,6 +89,8 @@
 
 - 2026-10-18 09:38（新 Mac／macOS）：通过 OpenCLI 只读列出星球并确认目标主星「帅张和他的朋友们」，但话题读取返回平台错误 1059（不支持非官方工具），不能继续用 OpenCLI 提取帖子。知识星球官方 Skill 的安装指南要求全局安装 `zsxq-cli` 与 Skill，再由用户完成 OAuth；本机均未安装，未创建或加载星球简报任务。临时 OpenCLI 标签和会话已关闭；每天 08:00 与 09:00 的既有任务未改动。
 
+- 2026-10-17 21:33（Win10）：项目内 `wechat-acp@0.10.0` 与 `@agentclientprotocol/codex-acp@2.2.2` 精确版本检查通过；PowerShell 启动脚本语法和 `gpt-6-luna`／`max` 专用配置通过。适配器自带 Codex CLI 的临时只读真实请求返回预期文本；daemon 状态为 Running，进程命令行包含本项目工作目录、维护版 Codex ACP raw command 与 `--hide-thoughts`，启动日志确认登录复用和轮询开始且无新增启动错误。本轮未发送微信测试消息。
+
 - 2026-10-17 21:04（Win10）：清理 Git 工作区临时文件记录。删除可重新生成且未被 Git 跟踪的 `tmp_ma.py`、`tmp_ma.json`、`tmp_ma2.json`；将任务临时目录 `.tmp/` 加入 `.gitignore`，保留其中来源较早、用途不一的现有内容，不做整目录删除。验证：三个根目录临时文件均不存在，`.tmp/` 命中项目忽略规则且不再出现在 `git status`。
 
 - 2026-10-17 19:07（新 Mac／macOS）：提交前核对个人清单触发与归档规则、README 目录约定和每日打卡提醒记录，文档本地链接与 git diff --check 通过；workspace 总览同步每日提醒的文档状态。此次仅提交现有可跟踪文档改动，不读取个人清单正文、不重新触发任务或复查服务在线状态；脚本、个人数据和运行配置仍按项目忽略规则保留本机。
@@ -98,7 +104,3 @@
 - 2026-10-17 09:31（新 Mac／macOS）：`max` 配置的 ACP initialize／session/new 与真实提示响应通过，返回 `model=gpt-6-luna`、`reasoning_effort=max`、`mode=workspace-write`、`end_turn`。原 Codex PID `28593` 及 15 个后代进程完全退出后，新 PID `33846` 单实例运行，固定构建与配置指纹检查通过，微信登录复用和轮询启动标记存在，无新增 Fatal／过期／轮询错误。提交前文档与链接、Shell／Python 语法、git diff --check 通过；本轮未发送微信测试消息。
 
 - 2026-10-17 09:03（新 Mac／macOS）：按散帅要求实际调用 `manage-codex-usage`，08:59:29 成功返回 Plus、5 小时剩余 85%／已用 15%（重置 2026-10-17 13:19:56）、每周剩余 64%／已用 36%（重置 2026-10-22 21:25:11），均为北京时间且仅代表该查询时刻。散帅明确确认 Skill 已在 Mac 跑通；本次确认不扩大到微信端卡片实收或 Win10。提交前核对文档、源码忽略边界与现有 12 项测试／Skill 校验证据，未重复查询额度或重启 Bot。
-
-- 2026-10-17 08:55（新 Mac／macOS）：`manage-codex-usage` 的真实官方只读查询成功，08:54:33 返回 Plus、5 小时剩余 87%／每周剩余 64%及重置时间，仅代表该查询时刻。12 项测试覆盖 0%／100%、小数、北京时间、多桶、缺失与非法字段、响应通知、错误脱敏、超时与子进程退出；全部通过。官方 Skill 校验器通过，`skills/list` 确认新 Skill enabled，源码与软链接均被 Git 忽略；git diff --check 通过。微信端自然语言调用和手机卡片实收未验证。
-
-- 2026-10-17 08:47（新 Mac／macOS）：提交前核对 Codex 接入的 README、部署说明与路线图，文档链接和 git diff --check 通过；本次仅提交三份文档，scripts／runtime-data 按现有忽略规则保留本机，不包含依赖、凭据或运行数据。此前 10 项发送回归与模型响应、微信实收验收结论保持不变，本轮未重复请求模型或重启 Bot。
