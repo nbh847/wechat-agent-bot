@@ -54,6 +54,8 @@ wechat-agent-bot/
 │   └── cron-tasks/    # 定时任务（launchd + wechat-acp inject）
 │       ├── README.md  # 任务清单与约定
 │       └── launchd/   # plist 源文件（加载副本在 ~/Library/LaunchAgents/）
+├── tools/
+│   └── bot-switch/    # 双机共享的渠道切换入口和测试（不含本机配置）
 ├── docs/
 │   ├── deployments/           # 各 Agent 部署手册（每篇含 macOS/Win10 双节；新增 Agent 复制模板加一篇）
 │   │   ├── codebuddy.md       # CodeBuddy
@@ -87,7 +89,11 @@ wechat-agent-bot/
 
 `runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经散帅单独批准。
 
-`scripts/wechat-acp/`（双机通用目录，脚本按系统区分）：macOS 的 Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh`；Win10 的 Codex 使用 `start-codex-daemon.ps1` 与 `codex-config.win10.json`。各入口只调用本机固定版本依赖，找不到依赖时直接失败；Codex 固定使用 `gpt-6-luna`、`max` 和 `workspace-write`，不修改全局 Codex 配置。macOS 脚本继续校验构建、配置指纹与单实例；Win10 脚本拒绝配置漂移，并由 `wechat-acp` 的 PID 门禁防止重复 daemon。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
+`scripts/wechat-acp/`（双机通用目录，脚本按系统区分）：macOS 的 Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh`；Win10 的 Codex 使用 `start-codex-daemon.ps1` 与 `codex-config.win10.json`。各入口只调用本机固定版本依赖，找不到依赖时直接失败；Codex 默认使用 `gpt-6-luna`、`max` 和 `workspace-write`，不修改全局 Codex 配置。macOS 脚本继续校验构建、配置指纹与单实例；Win10 脚本拒绝配置漂移，并由 `wechat-acp` 的 PID 门禁防止重复 daemon。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
+
+`tools/bot-switch/`（双机共享入口，按系统检查本机依赖）：保存终端切换 Claude、Codex、CodeBuddy 的脚本与测试，可由 Git 跟踪；本机启动脚本、配置和运行依赖仍保存在忽略目录，各机分别准备和验证。目录仅存放共享源码和测试，临时数据遵循 `.tmp/` 约定；源码删除须明确授权。使用方式和当前验收状态见 [切换说明](docs/deployments/bot-switch.md) 。
+
+统一入口支持在 macOS 切换 Codex 时通过 `--model` 与 `--effort` 指定本次配置；不指定时沿用固定默认值。脚本根据本地快照校验模型与强度组合，使用 `--list-models` 查看；清单未覆盖时停止并核对。Win10 的自定义参数待核验本机启动脚本，暂时拒绝执行。
 
 新 Mac 启动脚本通过 `build-manifest.json` 校验上游提交、源码及构建指纹，并拒绝已有 Node 微信 Bot 实例。Claude preset 固定调用项目内 `0.85.1` 适配器，不在启动时下载依赖。登录数据位于本机 `/Users/mac/.wechat-acp/`，不进入仓库；启动入口不注册开机自启，也不恢复旧 Mac 定时任务。
 

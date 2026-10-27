@@ -20,9 +20,9 @@
 
 - 2026-10-17 08:47（双机通用／项目权限）：散帅明确授权本项目操作 Memex 知识库，并确认「入库」即指 Memex 入库。项目规则已记录授权边界与 SOP 入口；每次实际入库仍须按 `docs/operations/ingestion-sop.md` 判定 manual／auto／batch 并执行对应流程。本条仅记录权限和流程约定，不代表本次执行了 Memex 写入。
 
-- 2026-10-17 08:29（新 Mac／macOS）：完成 Codex 本地接入与后台切换。项目内固定 `@agentclientprotocol/codex-acp@2.2.2`／Codex CLI `0.160.1`，Bot 专用配置为 `gpt-6-luna`、`medium`，未修改全局 Codex 默认配置。复用现有微信发送修复构建，新增独立启动入口、配置与指纹；旧 Claude Bot 及其子进程退出后切换为单实例 Codex Bot。模型响应、轮询启动与微信端实收验收通过；实际 Bot 会话工作目录／规则读取与安全边界专项验收仍在进行中，见 [部署说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/codex.md) 。
-
 - 2026-10-17 08:47（新 Mac／macOS）：Codex 微信实收验收通过。依据为散帅明确确认「Codex 微信验收通过」；实际 Bot 会话工作目录／规则读取与安全边界专项验收不包含在本项内，Win10 未验证。
+
+- 2026-10-17 08:29（新 Mac／macOS）：完成 Codex 本地接入与后台切换。项目内固定 `@agentclientprotocol/codex-acp@2.2.2`／Codex CLI `0.160.1`，Bot 专用配置为 `gpt-6-luna`、`medium`，未修改全局 Codex 默认配置。复用现有微信发送修复构建，新增独立启动入口、配置与指纹；旧 Claude Bot 及其子进程退出后切换为单实例 Codex Bot。模型响应、轮询启动与微信端实收验收通过；实际 Bot 会话工作目录／规则读取与安全边界专项验收仍在进行中，见 [部署说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/codex.md) 。
 
 - 2026-10-03 12:38（新 Mac／macOS）：散帅确认收到新样式推送并要求长期沿用；按散帅要求简化智谱额度模板，移除装饰图标，按散帅随后反馈加入独立一行 10 格剩余额度进度条（实心 `▓`／空格 `░`），剩余／已用合并展示，保留套餐、北京时间和完整重置时间；手动查询与每日任务共用新渲染，固定模板文档同步。
 
@@ -39,13 +39,18 @@
 - 2026-10-02 20:34（新 Mac／macOS）：项目内构建与启动入口重建并验证。固定上游 `4b787a5`／`0.10.0`，重新实现端点级超时、发送响应校验及基础脱敏审计；安装项目内 Claude ACP `0.85.1`，固定本地入口；启动脚本校验构建指纹与已有 Bot 进程。旧 Mac 完整本地补丁未随 Git 保存，本次不宣称恢复全部历史行为。未迁移定时任务或启用开机自启。
 
 - 2026-09-12（macOS）：**下线并删除「22h 未活动提醒」定时任务**。卸载 `com.sanshuai.wechat-agent-bot.send-failure-alert`（launchd `StartInterval` 每小时），删除 `scripts/cron-tasks/launchd/` 下源 plist、`~/Library/LaunchAgents/` 下运行副本与 wrapper `run-send-failure-alert.sh`，并同步清理 `scripts/cron-tasks/README.md` 目录约定与任务清单。既有日志（`runtime-data/cron/send-failure-alert*.log/.state`）与 ROADMAP 历史记录保留用于追溯。其余 5 个定时任务与 daemon 未修改。
+
 - 2026-09-11（仅 macOS）：**下线并删除临时 token 探针与微信链路心跳监控**。在主动推送原因完成定位后，卸载 `com.sanshuai.wechat-agent-bot.token-probe` 与 `com.sanshuai.wechat-agent-bot.wechat-heartbeat` 两个 launchd 任务，删除 `run-token-probe.sh`、`run-wechat-heartbeat.sh` 及对应 plist。前者不再产生 08:00 至 22:00 整点测试消息；后者不再每 15 分钟把持续 `ret=-2` 重复弹窗并误报为需重新登录。既有日志、状态文件与发送审计保留用于追溯，其他定时任务和 daemon 未修改。
+
 - 2026-09-11（协议结论双机通用；探针证据仅 macOS）：**完成 iLink 主动推送限制复核并更新调研文档**。腾讯官方当前公开协议要求回复时回传入站 `context_token`，API 与客户端源码未提供独立主动推送凭据或续期接口；公开 issue 报告约 24 小时会话窗口和单令牌约 10 条出站额度，但属于实测线索而非官方 SLA。macOS 小时探针证实 09:00 仍有成功发送，10:00、11:00 均正常调度、正常消费 injection，却各 3 次被 HTTP 200 + `ret=-2` 拒绝；因此排除脚本停摆，并把判断从“固定时长过期”修正为“同一入站令牌的额度耗尽或窗口失效，前者为更强假设但尚未最终区分”。详细证据、来源和双通道建议见 `docs/research/wechat-access-options.md`。
+
 - 2026-09-09（macOS）：**修复「22h 未活动提醒」数据源 + 新增微信链路心跳监控**。原 `run-send-failure-alert.sh` 误读已冻结的仓库 `runtime-data/conversations/state.json`（8-15 起 daemon 不再写入），导致算出永久休眠、提醒从不触发；改为读权威源 `~/.wechat-acp/state.json` 的 `users[*].lastSeenAt`。心跳 `run-wechat-heartbeat.sh`（launchd StartInterval 每 15 分钟，仅 macOS）双信号判定链路健康：主判据 `send-audit.jsonl` 最近 1h 有 `WeChatSendBusinessError/HttpError` 且无 `success` 抵消（`ret=-2` 记重度业务拒绝，不单独等同于 contextToken 过期）、辅判据 `wechat-acp.log` 新增段 `getUpdates error (3/3)` ≥2；轻度调受控重启、重度只告警催人工、无无限重试。背景：9-08 下午起微信 session 失效但 daemon 进程活着、定时任务照跑、send-audit 全绿的隐蔽断链。
-- 2026-08-31（macOS）：**发送失败假成功根因修复（Goal 01—06）完成并端到端验收**。本地锁定官方提交 `4b787a5`（版本 `0.10.0`），在 API 责任层修复：端点级超时语义、可选 `ret` 响应校验、`sent/pending/unknown` 投递结果传播、bridge 单层三次同 `client_id` 重试、`/acp-more` 原序待取回、脱敏 JSONL 审计；逐字段核对腾讯官方参考实现 `@tencent-weixin/openclaw-weixin@2.4.6` 后证实成功响应允许缺省 `ret` 并在责任层修正。全量测试 235 项：234 通过、1 项 Windows 专属跳过、0 失败；TypeScript 构建与隔离验证通过；受控重启后微信只收到一次完全一致回复、审计仅新增一条 `attempt=1` 干净记录。
-- 2026-08-31（macOS）：**daemon 每周受控重启上线并完成收尾**。每周二 04:00（仅 macOS），wrapper `scripts/cron-tasks/run-daemon-restart.sh` 固定 CLI `0.10.0`、旧实例最多等 90s（`STOP_EXIT_BUDGET`，实测优雅停机约 38s，原 30s 预算过紧已修正）、失败只重试一次；`stop` 前经 macOS `ps` 按 PID 校验命令匹配固定 CLI + `--agent claude` + 项目 `--cwd`，不匹配即中止不发送信号，防 stale PID 误停无关进程。通用临时目标约定：goal 按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 存放、被 `.gitignore` 忽略、整组完成并同步真实进度后经散帅确认删除。观察期见「进行中」。
 
 ## 进行中
+
+- **2026-10-27 10:49（新 Mac／仅 macOS）Codex 切换参数**：统一入口支持 `--model`、`--effort`，未指定时沿用默认配置；隔离 ACP 会话确认 `gpt-6.1-terra`／`medium` 并完成真实响应，随后按散帅要求切回默认 `gpt-6-luna`／`max`，单实例和轮询通过。按散帅要求把本机适配器返回的 8 个模型及各自强度保存为本地快照，匹配时不联网查询，未收录或组合无效时停止切换并提示核对。快照不是跨账号或永久可用保证；实际 Bot 会话模型与微信实收待确认。Win10 自定义参数待本机适配验证。
+
+- **2026-10-27 10:45（新 Mac／双机入口开发）Bot 渠道切换**：统一入口首次尝试从 Codex 切换到 Claude 时，启动脚本把切换器误判为已有 Bot，后以原有入口启动 Claude，散帅确认微信收发通过。修正后 Claude 重启通过；入口与测试迁至可被 Git 跟踪的 `tools/bot-switch/` 后，Claude 切换至 Codex 的停止、启动、单实例及轮询检查通过。其他渠道互切、失败路径、微信实收及 Win10 均待验证。详见 [切换说明](/Users/mac/workspace/wechat-agent-bot/docs/deployments/bot-switch.md) 。
 
 - **2026-10-19（新 Mac／仅 macOS）星球原文简报**：LaunchAgent 每天 12:00、18:00 通过 `zsxq-raw-brief` Skill 调度；Skill 脚本每次读 `SKILL.md` 转发规则，再调用全局 `web-crawler` `feed` handler，筛选近 24 小时星主帖子并构造原文通知，不做 AI 摘要。首次自然调度、原文转发效果与微信实收待观察；`wechat-acp inject` 仍经过 ACP Agent。
 
@@ -64,6 +69,24 @@
 - **OpenClaw（`~/.qclaw/`）个人数据迁移收尾**：macOS 侧 second-brain/QClaw 资产迁移已完成（见「已完成」），剩余待整理的残留或新增数据按要求逐步迁入 `personal/`，未明确发起前不擅自清理。
 
 ## 最近验证
+
+- 2026-10-27 11:03（新 Mac／仅 macOS）：提交前检查共享切换入口，9 项测试、Node／Shell 语法和 `git diff --check` 通过；本机启动脚本、配置与运行数据未纳入 Git，Win10 未验证。
+
+- 2026-10-27 10:49（新 Mac／仅 macOS）：统一入口按默认配置重新启动 Codex Bot；旧 PID 16574 退出，新 PID 27113 单实例运行、命令行引用固定 Codex 配置并进入轮询。未发送微信测试，实际 Bot 会话模型尚未重新验证。
+
+- 2026-10-27 10:46（新 Mac／仅 macOS）：隔离 ACP 会话查询本机当前 8 个模型及各自思考强度，未发送模型提示；本地清单逐项覆盖返回结果，9 项单元测试、模型列表命令及不支持组合的拒绝路径通过。本轮未切换 Bot，Win10 未验证。
+
+- 2026-10-27 10:45（新 Mac／仅 macOS）：隔离 ACP 会话以 `gpt-6.1-terra`、`medium` 创建，模型响应正常结束；随后通过迁移后的入口切换 Claude 至 Codex，旧 PID 71572 退出，新 PID 16574 单实例运行并进入轮询。未发送微信测试；隔离会话结果不等同于实际 Bot 会话模型验证。
+
+- 2026-10-27 10:40（新 Mac／仅 macOS）：切换入口和测试迁至 `tools/bot-switch/` 后，8 项测试、Node／Shell 语法、Git 忽略边界及 `git diff --check` 通过；未重启 Bot，迁移后的实际切换和 Win10 未验证。
+
+- 2026-10-27 10:32（新 Mac／仅 macOS）：Codex 自定义参数的参数解析、配置生成、保留默认值、非 Codex 拒绝、非法参数拒绝及模拟启动预检共 8 项测试通过；未启动模型会话或切换当前 Claude Bot。
+
+- 2026-10-27 10:27（新 Mac／仅 macOS）：散帅确认首次切换后 Claude 微信收发通过。随后以统一入口重新切换至 Claude，旧 PID 65830 退出，新 PID 71572 启动并进入轮询；系统进程检查确认唯一 bridge 为 Claude。重启后微信收发尚未再次验证。
+
+- 2026-10-27 10:25（新 Mac／仅 macOS）：按散帅要求从 Codex 切换至 Claude。统一入口停掉旧进程后启动失败，改用原有启动入口启动 Claude PID 65830；进程参数确认唯一 bridge 为 Claude，新增轮询标记晚于最近一次轮询错误标记。修正启动脚本对切换器的误识别后，Shell／Node 语法、5 项单元测试及运行中拒绝重复启动检查通过；未复验完整统一切换流程或微信实收。
+
+- 2026-10-27 10:23（新 Mac／仅 macOS）：Bot 切换入口的 Node 语法检查、5 项进程树／归属／渠道匹配单元测试、Git 忽略规则和 `git diff --check` 通过。未执行真实停止、启动或微信收发；完整流程和 Win10 实机仍待验证。
 
 - 2026-10-22 20:54（新 Mac／仅 macOS）：拉取并合并 `origin/main`，解决 ROADMAP 中 macOS 星球原文简报与 Win10 Codex 接入记录的冲突；保留双方记录及机器归属，核对 README、Codex 部署说明与路线图状态一致。文档本地链接、冲突标记扫描和 `git diff --check` 通过；未复验 Win10 运行环境或发送微信。
 
@@ -86,21 +109,3 @@
 - 2026-10-18 10:10（新 Mac／仅 macOS）：按散帅要求将每日打卡提醒从每天 08:00 调整为 06:00；更新源 plist 与 LaunchAgents 运行副本，卸载并重新加载服务。`launchctl print` 确认 `gui/501` 的日历触发为 Hour 6／Minute 0，`runs=0`、`RunAtLoad` 关闭；源与运行 plist 均通过 `plutil -lint` 且内容一致，`git diff --check` 通过。未手动触发提醒。
 
 - 2026-10-18 10:01（新 Mac／macOS）：百度页经 OpenCLI 提取成功；知识星球页显示登录态，`groups` 与 `topics` 读取成功。`whoami` 的 `/v2/users/self` 检查单独返回 `AUTH_REQUIRED`；一次 `limit=50` 返回 14001，`limit=20` 成功，此前 1059 本次未复现。星主作者标识为 `stormzhang`；脚本只读筛选最近 24 小时，实际查询 20 条、星主发言 0 条，未触发微信注入。Python／Shell 语法、plist 校验通过；源 plist 与运行副本一致。`launchctl print gui/501/com.sanshuai.wechat-agent-bot.zsxq-brief` 确认 12:00、18:00 触发、`runs=0`、`RunAtLoad` 关闭。
-
-- 2026-10-18 09:38（新 Mac／macOS）：通过 OpenCLI 只读列出星球并确认目标主星「帅张和他的朋友们」，但话题读取返回平台错误 1059（不支持非官方工具），不能继续用 OpenCLI 提取帖子。知识星球官方 Skill 的安装指南要求全局安装 `zsxq-cli` 与 Skill，再由用户完成 OAuth；本机均未安装，未创建或加载星球简报任务。临时 OpenCLI 标签和会话已关闭；每天 08:00 与 09:00 的既有任务未改动。
-
-- 2026-10-17 21:33（Win10）：项目内 `wechat-acp@0.10.0` 与 `@agentclientprotocol/codex-acp@2.2.2` 精确版本检查通过；PowerShell 启动脚本语法和 `gpt-6-luna`／`max` 专用配置通过。适配器自带 Codex CLI 的临时只读真实请求返回预期文本；daemon 状态为 Running，进程命令行包含本项目工作目录、维护版 Codex ACP raw command 与 `--hide-thoughts`，启动日志确认登录复用和轮询开始且无新增启动错误。本轮未发送微信测试消息。
-
-- 2026-10-17 21:04（Win10）：清理 Git 工作区临时文件记录。删除可重新生成且未被 Git 跟踪的 `tmp_ma.py`、`tmp_ma.json`、`tmp_ma2.json`；将任务临时目录 `.tmp/` 加入 `.gitignore`，保留其中来源较早、用途不一的现有内容，不做整目录删除。验证：三个根目录临时文件均不存在，`.tmp/` 命中项目忽略规则且不再出现在 `git status`。
-
-- 2026-10-17 19:07（新 Mac／macOS）：提交前核对个人清单触发与归档规则、README 目录约定和每日打卡提醒记录，文档本地链接与 git diff --check 通过；workspace 总览同步每日提醒的文档状态。此次仅提交现有可跟踪文档改动，不读取个人清单正文、不重新触发任务或复查服务在线状态；脚本、个人数据和运行配置仍按项目忽略规则保留本机。
-
-- 2026-10-17 19:05（新 Mac／macOS）：散帅确认在 16:30 收到每日打卡提醒；一次性任务于 16:30:01 执行成功并入队 1 项。临时 launchd label、安装 plist 和任务临时目录均已清理；正式每日 08:00 任务仍已加载、`runs=0`。
-
-- 2026-10-17 16:10（新 Mac／macOS）：每日打卡提醒一次性任务按本机北京时间触发，读取当前 JSON 清单并成功入队 1 项（任务退出码 0）；微信实际送达未确认。临时 launchd label、安装 plist 和任务临时目录均已自动清理；正式每日 08:00 label 仍已加载、`runs=0`。
-
-- 2026-10-17 16:02（新 Mac／macOS）：每日打卡提醒配置核验。Python 语法与 JSON 解析通过，源 plist `plutil -lint` 通过，安装副本与源文件一致；`launchctl print` 确认触发时间为本机北京时间每天 08:00、`runs=0`。未手动注入提醒，微信实际到达待首次自然运行确认。
-
-- 2026-10-17 09:31（新 Mac／macOS）：`max` 配置的 ACP initialize／session/new 与真实提示响应通过，返回 `model=gpt-6-luna`、`reasoning_effort=max`、`mode=workspace-write`、`end_turn`。原 Codex PID `28593` 及 15 个后代进程完全退出后，新 PID `33846` 单实例运行，固定构建与配置指纹检查通过，微信登录复用和轮询启动标记存在，无新增 Fatal／过期／轮询错误。提交前文档与链接、Shell／Python 语法、git diff --check 通过；本轮未发送微信测试消息。
-
-- 2026-10-17 09:03（新 Mac／macOS）：按散帅要求实际调用 `manage-codex-usage`，08:59:29 成功返回 Plus、5 小时剩余 85%／已用 15%（重置 2026-10-17 13:19:56）、每周剩余 64%／已用 36%（重置 2026-10-22 21:25:11），均为北京时间且仅代表该查询时刻。散帅明确确认 Skill 已在 Mac 跑通；本次确认不扩大到微信端卡片实收或 Win10。提交前核对文档、源码忽略边界与现有 12 项测试／Skill 校验证据，未重复查询额度或重启 Bot。

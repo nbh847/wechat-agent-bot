@@ -112,6 +112,7 @@
 - `ROADMAP.md`：当前阶段、已完成、待办、阻塞和最近验证。
 - `docs/research/`：带来源和核验日期的调研资料。
 - `docs/deployments/`：各 Agent（`claude.md` / `codebuddy.md` / `codex.md`）的 ACP 启动、部署与日常操作文档。
+- `tools/bot-switch/`：双机共享的 Bot 渠道切换入口及测试；本机配置和运行依赖仍留在忽略目录，详见 README。
 - `goals/`：本地临时执行目标目录，必须由 `.gitignore` 忽略，不进入 Git。需要把一个已确认方案拆成多个可独立验证的目标时，按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 存放；每个 goal 必须写明范围、前置条件、执行步骤、成功标准、验证方式、依赖与安全边界。goal 只用于实施期拆分，不能替代 `ROADMAP.md`；整组 goal 完成并把真实进度同步到 `ROADMAP.md` 后，必须先取得散帅对删除目标目录的一次性确认，再删除该组临时文件。
 - 新目录必须先在 `README.md` 中说明用途、命名和清理规则。
 
@@ -120,6 +121,7 @@
 - 所有通过微信 bot 操控的 Agent 开发功能，必须在 `wechat-agent-bot` 项目内完成
 - 必须放在被 `.gitignore` 忽略的路径下
 - 统一按轻量方式在 `personal/` 下建子目录
+- 例外：终端使用的双机共享 Bot 渠道切换入口及其测试放在 `tools/bot-switch/`，可由 Git 跟踪；机器专属配置、凭据和运行数据仍不得纳入该目录。
 - 禁止在项目外开发，也禁止在未忽略路径下开发
 - 示例：家庭资产盘点系统应放在 `personal/asset-inventory/`
 
