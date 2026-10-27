@@ -124,7 +124,7 @@
 ### 文档中记录、但不计入上述 36 个项目 Skill 的功能
 
 - 智谱 GLM Coding Plan 额度查询与卡片：[`glm-usage-template.md`](deployments/glm-usage-template.md)；查询 Skill 和定时任务按项目文档仅 macOS 已验证，Win10 状态见路线图。
-- Codex 剩余额度查询：`manage-codex-usage`（仅 macOS），规则与触发词见 [`AGENTS.md`](../AGENTS.md) 和 [`README.md`](../README.md)。
+- 智谱与 Codex 剩余额度查询：全局 `quota-usage`（仅 macOS），规则与入口见 [`AGENTS.md`](../AGENTS.md) 和 [`README.md`](../README.md)；Win10 未适配。
 - 大号记录：Win10 项目任务辅助文件包括 `scripts/cron-tasks/windows/poop-timer`、`poop-weekly`、`poop-monthly`；调用的 `poop-log` Skill 在 Win10 用户目录 `%USERPROFILE%\.claude\skills\poop-log\SKILL.md`，不属于仓库 Skill 清单。关键词：拉了、大号、上大号、大号周报、大号月报。报告本人已实际排便时（包括同时咨询腹泻等原因）应先记录本次；单纯讨论或请求周／月报不新增记录。数据文件位于 `runtime-data/skills-home/workspace/data/poop-log.json`，不复制具体记录，也不推断形状类型。
 
 ## Win10 本机定时任务目录

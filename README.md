@@ -44,6 +44,8 @@ wechat-agent-bot/
 ├── .tmp/              # 本次任务临时文件（不进 Git，按任务子目录清理）
 ├── personal/          # 本机个人数据与私有 Skill 源码（不进 Git；各机器分别保存）
 │   ├── skills/        # 项目本机 Skill 源码；按 Skill 标注机器归属
+│   │   ├── quota-usage/ # 全局额度 Skill 的历史本地副本，不作为当前入口
+│   │   └── zsxq-raw-brief/ # 知识星球原文简报 Skill，供定时任务调用
 │   ├── daily-reminders.json # 仅 macOS：每日提醒事项清单
 │   ├── destination/   # 旅行目的地
 │   ├── game/          # 待玩或想玩的游戏
@@ -59,6 +61,8 @@ wechat-agent-bot/
 │   └── cron-tasks/    # 本机定时任务，按系统区分
 │       ├── windows/   # 仅 Win10：Task Scheduler 包装、提示词与注册脚本
 │       └── launchd/   # 仅 macOS：plist 源文件（加载副本在 ~/Library/LaunchAgents/）
+├── tools/
+│   └── bot-switch/    # 双机共享的渠道切换入口和测试（不含本机配置）
 ├── docs/
 │   ├── project-index.md       # 功能、Skill、定时任务与术语关键词总索引
 │   ├── deployments/           # 各 Agent 部署手册（每篇含 macOS/Win10 双节；新增 Agent 复制模板加一篇）
@@ -89,6 +93,8 @@ wechat-agent-bot/
 
 `personal/daily-reminders.json`（仅 macOS）：每日打卡提醒的数据源，使用 `version` 和 `items` 字段；每项包含稳定 `id`、提醒文本 `title` 与布尔值 `enabled`。定时脚本每次运行时重新读取此文件，增删改提醒只需编辑 JSON，不用修改脚本或重载调度。该文件位于被 Git 忽略的 `personal/`，两台机器各自保存。
 
+`personal/skills/zsxq-raw-brief/`（仅 macOS）：知识星球星主原文简报 Skill，包含 `SKILL.md` 和供 LaunchAgent 调用的脚本；脚本使用全局 `web-crawler` Skill 抓取并筛选近 24 小时星主帖子，保留原文，不做 AI 摘要。通过现有 `wechat-acp inject` 投递时，内容仍会经过 ACP Agent 转发；投递链路详见定时任务说明。该目录位于被 Git 忽略的 `personal/`，仅本机使用。
+
 ### 本地临时源码与运行数据（均不进 Git）
 
 `runtime-data/skills-home/workspace/data/drawdown-alert-state.json`（仅 Win10）：股价监控去重状态；`levels` 保存回撤档位，`qqqiFocusSwitch` 保存 QQQI／分众换仓观察的前复权基准日期与已触发标记。每批实际交易后，按最新持仓和价格重设下一批基准；该文件只记录提醒状态，不代表已交易。
@@ -97,7 +103,7 @@ wechat-agent-bot/
 
 `runtime-data/skills-home/workspace/data/home-inventory.json` 与 `scripts/inventory.js`（仅 Win10）：本机家庭物品库存。可补货的消耗品和替换耗材使用现有 `tags` 字段标记「囤货」，通过 `stockpile` 命令集中查看数量与位置；原有品类保留，耐用物品不纳入。数据与脚本位于本机忽略目录，不进 Git。
 
-`personal/skills/manage-codex-usage/`（仅 macOS）：项目本地 Codex 剩余额度查询 Skill 与标准库 Python 脚本，使用 Bot 项目内 Codex CLI 的 `account/rateLimits/read` 接口，不直接读取凭据、不创建模型会话、不主动发起登录或注销。`.agents/skills/manage-codex-usage` 与 `.claude/skills/manage-codex-usage` 仅以软链接接入同一源目录，均不进 Git；删除须明确授权。可在微信说「查询 Codex 剩余额度」或「Codex 额度还剩多少」。返回当前本机 Codex 登录账号的各额度窗口剩余比例与北京时间重置时间，不按聊天历史估算用量，也不表示 API 现金余额。当前 Bot 使用 `gpt-6-luna max`，账号共享窗口不冒充该模型独享额度。失败返回脱敏提示，单次查询预算为 60 秒，不自动重试或增加定时推送。
+`/Users/mac/.codex/skills/quota-usage/`（仅 macOS）：智谱 GLM Coding Plan 与 Codex 共用的全局额度查询 Skill。手动查询及每天 09:00 的定时任务都调用其 `scripts/query.py`，按 `--glm`、`--codex` 或 `--all` 获取原文卡片；同一份接口数据使用相同校验与渲染逻辑，实际额度和时间戳会随用量及重置变化。`personal/skills/quota-usage/` 保留旧版本地副本，不作为查询入口。Codex 按 Skill 通过当前登录 CLI 的 `account/rateLimits/read` 查询账号额度桶，不直接读取凭据、不创建模型会话、不主动发起登录或注销；额度不表示 API 现金余额，也不冒充 `gpt-6-luna max` 独享额度。查询失败只返回脱敏错误，不使用历史数据。
 
 `personal/skills/task-calendar-routing/`（仅 Win10）：滴答清单与 Google Calendar 的任务／日程分流 Skill 源码；一般有日期 Dida365 待办手动单向镜像到 Google Calendar；银行卡／平台红包、返现、抽奖、优惠券等羊毛类提醒直接微信推送，不创建日历事件或镜像；`.agents/skills/task-calendar-routing` 和 `.claude/skills/task-calendar-routing` 作为本机 Agent 入口链接到同一源码，不进 Git，也不自动同步到 macOS。分流口径见对应 Skill 和项目索引。
 
@@ -111,7 +117,11 @@ wechat-agent-bot/
 
 `runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经火球单独批准。
 
-`scripts/wechat-acp/`（双机通用目录，脚本按系统区分）：macOS 的 Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh`；Win10 的 Codex 使用 `start-codex-daemon.ps1` 与 `codex-config.win10.json`。各入口只调用本机固定版本依赖，找不到依赖时直接失败；Codex 固定使用 `gpt-6-luna`、`max` 和 `workspace-write`，不修改全局 Codex 配置。macOS 脚本继续校验构建、配置指纹与单实例；Win10 脚本校验 `wechat-acp@0.10.0`、`codex-acp@2.2.2`、`@openai/codex@0.163.0` 与专用配置，并通过 `CODEX_PATH` 指向项目内 CLI，由 `wechat-acp` 的 PID 门禁防止重复 daemon。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
+`scripts/wechat-acp/`（双机通用目录，脚本按系统区分）：macOS 的 Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh`；Win10 的 Codex 使用 `start-codex-daemon.ps1` 与 `codex-config.win10.json`。各入口只调用本机固定版本依赖，找不到依赖时直接失败；Codex 默认使用 `gpt-6-luna`、`max` 和 `workspace-write`，不修改全局 Codex 配置。macOS 脚本继续校验构建、配置指纹与单实例；Win10 脚本校验 `wechat-acp@0.10.0`、`codex-acp@2.2.2`、`@openai/codex@0.163.0` 与专用配置，并通过 `CODEX_PATH` 指向项目内 CLI，由 `wechat-acp` 的 PID 门禁防止重复 daemon。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
+
+`tools/bot-switch/`（双机共享入口，按系统检查本机依赖）：保存终端切换 Claude、Codex、CodeBuddy 的脚本与测试，可由 Git 跟踪；本机启动脚本、配置和运行依赖仍保存在忽略目录，各机分别准备和验证。目录仅存放共享源码和测试，临时数据遵循 `.tmp/` 约定；源码删除须明确授权。使用方式和当前验收状态见 [切换说明](docs/deployments/bot-switch.md) 。
+
+统一入口支持在 macOS 切换 Codex 时通过 `--model` 与 `--effort` 指定本次配置；不指定时沿用固定默认值。脚本根据本地快照校验模型与强度组合，使用 `--list-models` 查看；清单未覆盖时停止并核对。Win10 的自定义参数待核验本机启动脚本，暂时拒绝执行。
 
 新 Mac 启动脚本通过 `build-manifest.json` 校验上游提交、源码及构建指纹，并拒绝已有 Node 微信 Bot 实例。Claude preset 固定调用项目内 `0.85.1` 适配器，不在启动时下载依赖。登录数据位于本机 `/Users/mac/.wechat-acp/`，不进入仓库；启动入口不注册开机自启，也不恢复旧 Mac 定时任务。
 
@@ -119,9 +129,13 @@ wechat-agent-bot/
 
 `scripts/cron-tasks/launchd/`（仅 macOS）：保存本机定时任务的 plist 源文件，运行副本位于 `/Users/mac/Library/LaunchAgents/`。`runtime-data/cron/` 保存本机任务日志与互斥锁，不进 Git；成功仅表示脚本完成，微信到达需单独核验。脚本或 Skill 数据源缺失时任务失败退出，不生成占位内容。日志不得记录消息正文、凭据或原始接口响应。来源未恢复的任务不加载；当前恢复状态见项目 ROADMAP 与本地任务清单。停止任务使用对应 label 的 `launchctl bootout`，保留项目源文件和日志；删除须明确授权。
 
-`.claude/skills/glm-stats/`（仅 macOS）：项目级智谱 GLM Coding Plan 额度查询 Skill，脚本按官方用量插件的请求构造，只查询额度端点一次并输出中文卡片。`runtime-data/cron/glm-credentials.json` 保存用户在本机手动录入的专用配置，权限为 `600`，不进 Git；配置不得进入 plist 或日志。`scripts/cron-tasks/setup-glm-credentials.command` 提供隐藏输入的本机录入入口，不改变 Claude Code 的认证配置。查询、定时包装及手动查询共用此 Skill，不读取其他项目的凭据。
+星球简报定时任务（仅 macOS）调用 `personal/skills/zsxq-raw-brief/` 中的 Skill 脚本；该脚本通过全局 `/Users/mac/.codex/skills/web-crawler/SKILL.md` 的知识星球 `feed` handler 抓取，并用 CDP 访问已登录的独立浏览器配置；任务细节见 `scripts/cron-tasks/README.md`。
+
+`runtime-data/cron/glm-credentials.json`（仅 macOS）：智谱只读查询专用配置，权限为 `600`，不进 Git；不得复制到 plist 或日志。`scripts/cron-tasks/setup-glm-credentials.command` 提供隐藏输入的本机录入入口，不改变 Claude Code 的认证配置。全局额度 Skill 在环境变量和用户标准配置均未指定时，可将此文件作为本项目的 macOS 回退配置；所有手动查询与定时任务均调用全局 Skill 入口。
 
 智谱额度手动查询、定时推送与转发统一使用 [固定卡片模板](/Users/mac/workspace/wechat-agent-bot/docs/deployments/glm-usage-template.md) ，不由 Agent 临时改版。
+
+手动查询成功时只返回本次智谱或 Codex 额度卡片；只有查询报错时才返回脱敏错误，不输出执行过程或进度。每日 09:00 任务成功时只推送两张卡片；任一查询失败则不推送部分结果或旧卡片，当前包装脚本仅记录脱敏错误日志。
 
 ## Agent 入口
 

@@ -83,13 +83,15 @@
 - 密钥、token、密码和真实登录数据不得进入代码、日志或 Git。
 - 常规只读 Git 可直接执行；删除、回滚、rebase、改历史、push、force-push、tag 和 release 必须先确认。
 - Commit 信息使用中文描述和 `init:`、`feat:`、`fix:`、`refactor:`、`docs:` 或 `chore:` 前缀，不添加 `Co-Authored-By`。
-- **涉及第三方平台查询、统计或监控时，必须优先使用已存在的 skill**（如查询智谱额度用 `glm-stats`，查询 Codex 用量用 `manage-codex-usage`），不得自行解析原始数据或手动格式化输出。
-- **Codex 剩余额度查询（仅 macOS）**：微信请求「查询 Codex 剩余额度」「Codex 额度还剩多少」时，读取项目 `/Users/mac/workspace/wechat-agent-bot/.agents/skills/manage-codex-usage/SKILL.md` 并按其执行，只返回脚本卡片。Skill 源码在被忽略的 `personal/skills/manage-codex-usage/`，`.agents/skills/` 与 `.claude/skills/` 以软链接接入；不得直接读取凭据或从会话 Token 数推算剩余额度。
-- 智谱额度手动查询与定时推送统一使用 `docs/deployments/glm-usage-template.md` 的固定模板，由 `glm-stats` 脚本渲染并直接返回；仅在火球明确要求改版时变更。
+- **涉及第三方平台查询、统计或监控时，必须优先使用已存在的 skill**，不得自行解析原始数据或手动格式化输出；macOS 的额度查询入口见下方规则。
 - **QQQI 派息金额（双机通用）**：火球询问 QQQI 当月或单次派息金额时，统一折算为人民币，并注明采用的 USD/CNY 汇率与日期。
 - **QQQI 年度分红表（仅 Win10）**：火球问「今年 QQQI 分红」「今年分红列表」等时，读取 `runtime-data/skills-home/workspace/data/qqqi-tax.json`，只列 `symbol` 为 `QQQI` 的记录，不混入 QQQ。固定表格列月份、券商、扣税后人民币、费用人民币和扣费后净额人民币；扣税后金额按分红总额减预扣税，费用单列，月度与年度合计先汇总 USD 再按同一 USD/CNY 汇率换算并四舍五入到分。注明汇率与日期。账本已知资金处理方式时标注「现金到账」「再投资」或「部分再投资」；再投资分红仍计入年度分红，但不视为可用现金，也不推测未提供的再投资股数或成交价。官方公告或交易记录只能形成「待核对」项；火球明确确认到账或金额后可转为用户确认记录；火球只要求按估值计入时，单列估算行并标明假设、券商未确认，合计说明含估算，不得伪装成券商流水实收。未记录的月份不推算金额。
 - **不同券商对比（仅 Win10）**：火球问「不同券商对比」「券商收费对比」等时，读取 `runtime-data/skills-home/workspace/data/broker-comparison.json`，只返回其中固定表格，包含券商、地点、QQQI 分红扣款、最低交易费和融资年利率；未知费率或计价币种写「待确认」，不展开单笔流水、不自行推测。只有火球提供新数据后才更新表格。
-- 查询 / 整理 / 转发类任务只输出最终产物（如 `glm-stats` 模板卡片），不写开场白、过程叙述（`运行脚本`、`时间戳用代码计算` 等）和结尾的「说明 / 注记」段落；中间步骤一律不进回复。
+- **知识星球原文简报（仅 macOS）**：LaunchAgent 经 `scripts/cron-tasks/run-zsxq-brief.sh` 直接调用本地 `personal/skills/zsxq-raw-brief/scripts/run.py`；Skill 脚本每次读取其 `SKILL.md` 转发规则，并使用全局 `/Users/mac/.codex/skills/web-crawler/SKILL.md` 的知识星球 `feed` handler 抓取。兼容入口 `scripts/cron-tasks/zsxq-brief.py` 只转交给同一 Skill。正文不得交给 AI 摘要、概括或改写；不得切回 OpenCLI 抓取或另写网页抓取逻辑。现有 `wechat-acp inject --file` 仍经 ACP Agent 投递，无法保证传输层字节级原样直发。运行与依赖说明见 `scripts/cron-tasks/README.md`。
+- **额度查询（仅 macOS）**：智谱与 Codex 统一使用全局 `quota-usage` Skill，读取 `/Users/mac/.codex/skills/quota-usage/SKILL.md`，并依查询范围调用 `/Users/mac/.codex/skills/quota-usage/scripts/query.py`。手动查询与每天 09:00 定时任务必须调用同一全局入口，不得绕过 Skill 或调用项目旧实现；不得直接读取凭据、从会话 Token 数推算额度或使用历史数据。若沙箱拦截 Codex App Server，按宿主权限流程授权后重跑同一入口。
+- 智谱额度手动查询与定时推送统一使用 `docs/deployments/glm-usage-template.md` 的固定模板，由全局 `quota-usage` Skill 入口调用渲染脚本并原文返回；仅在火球明确要求改版时变更。
+- **智谱与 Codex 额度回复**：手动查询成功时只返回本次额度卡片，不发送查询进度、执行过程或额外说明；只有查询报错时才返回脱敏错误，不使用旧数据。每日合并任务成功时只推送智谱与 Codex 两张卡片；任一查询失败、输出无效或超时都不发送部分结果，按任务约定记录脱敏错误。
+- 查询 / 整理 / 转发类任务只输出最终产物（如额度模板卡片），不写开场白、过程叙述（`运行脚本`、`时间戳用代码计算` 等）和结尾的「说明 / 注记」段落；中间步骤一律不进回复。
 
 ## 已犯错误（禁止重犯）
 
@@ -127,6 +129,7 @@
 - `docs/project-index.md`：项目功能、Skill、定时任务、关键词术语和资料入口索引。
 - `docs/research/`：带来源和核验日期的调研资料。
 - `docs/deployments/`：各 Agent（`claude.md` / `codebuddy.md` / `codex.md`）的 ACP 启动、部署与日常操作文档。
+- `tools/bot-switch/`：双机共享的 Bot 渠道切换入口及测试；本机配置和运行依赖仍留在忽略目录，详见 README。
 - `goals/`：本地临时执行目标目录，必须由 `.gitignore` 忽略，不进入 Git。需要把一个已确认方案拆成多个可独立验证的目标时，按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 存放；每个 goal 必须写明范围、前置条件、执行步骤、成功标准、验证方式、依赖与安全边界。goal 只用于实施期拆分，不能替代 `ROADMAP.md`；整组 goal 完成并把真实进度同步到 `ROADMAP.md` 后，必须先取得火球对删除目标目录的一次性确认，再删除该组临时文件。
 - 新目录必须先在 `README.md` 中说明用途、命名和清理规则。
 
@@ -135,6 +138,7 @@
 - 所有通过微信 bot 操控的 Agent 开发功能，必须在 `wechat-agent-bot` 项目内完成
 - 必须放在被 `.gitignore` 忽略的路径下
 - 统一按轻量方式在 `personal/` 下建子目录
+- 例外：终端使用的双机共享 Bot 渠道切换入口及其测试放在 `tools/bot-switch/`，可由 Git 跟踪；机器专属配置、凭据和运行数据仍不得纳入该目录。
 - 禁止在项目外开发，也禁止在未忽略路径下开发
 - 示例：家庭资产盘点系统应放在 `personal/asset-inventory/`
 
