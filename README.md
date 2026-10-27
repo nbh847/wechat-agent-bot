@@ -41,20 +41,24 @@ wechat-agent-bot/
 ├── CLAUDE.md          # Claude Code 入口规则
 ├── ROADMAP.md         # 项目进度
 ├── goals/             # 本地临时执行目标（不进 Git，完成后经确认删除）
-├── personal/          # 本机个人待做事项（不进 Git；各机器分别保存）
+├── .tmp/              # 本次任务临时文件（不进 Git，按任务子目录清理）
+├── personal/          # 本机个人数据与私有 Skill 源码（不进 Git；各机器分别保存）
+│   ├── skills/        # 项目本机 Skill 源码；按 Skill 标注机器归属
 │   ├── daily-reminders.json # 仅 macOS：每日提醒事项清单
 │   ├── destination/   # 旅行目的地
 │   ├── game/          # 待玩或想玩的游戏
+│   ├── health/        # 仅 Win10：健康管理项目与私人健康记录
 │   ├── product/       # 产品想法
 │   ├── project/       # 想做的项目
+│   ├── rice-review/   # 仅 Win10：大米价格与评价记录
 │   ├── reading/       # 待读或想读的书
 │   ├── research/      # 想研究的主题
 │   └── watchlist/     # 待看影视：电影、电视剧、纪录片
 ├── scripts/
 │   ├── wechat-acp/    # 按系统区分的 wechat-acp daemon 启动/验证入口（见下）
-│   └── cron-tasks/    # 定时任务（launchd + wechat-acp inject）
-│       ├── README.md  # 任务清单与约定
-│       └── launchd/   # plist 源文件（加载副本在 ~/Library/LaunchAgents/）
+│   └── cron-tasks/    # 本机定时任务，按系统区分
+│       ├── windows/   # 仅 Win10：Task Scheduler 包装、提示词与注册脚本
+│       └── launchd/   # 仅 macOS：plist 源文件（加载副本在 ~/Library/LaunchAgents/）
 ├── docs/
 │   ├── project-index.md       # 功能、Skill、定时任务与术语关键词总索引
 │   ├── deployments/           # 各 Agent 部署手册（每篇含 macOS/Win10 双节；新增 Agent 复制模板加一篇）
@@ -71,15 +75,35 @@ wechat-agent-bot/
 
 `goals/` 只保存已确认方案在实施期的临时拆分，不是项目进度源。按 `goals/<initiative-slug>/<NN>-<goal-slug>.md` 命名；每个 goal 独立定义成功标准和验证方式。整组目标完成并将结果同步到 `ROADMAP.md` 后，经火球确认再删除对应 initiative 目录。
 
-`personal/` 保存本机个人清单和想法，不进 Git，两台机器各自独立。`personal/watchlist/` 统一记录待看的电影、电视剧和纪录片；`personal/reading/` 记录待读书目；`personal/game/` 记录待玩游戏。清单按一项一份 Markdown 文件记录，使用英文短横线文件名；同一系列的多季合并在一条记录中。完成后更新原条目状态，不自动删除。
+`.tmp/<task-slug>/` 只存放当前任务产生的临时脚本和可重建产物；`.tmp/` 已加入 `.gitignore`。任务结束后仅清理本任务创建的子目录，不清空其他任务留下的内容。
+
+`personal/` 保存本机个人清单、想法和私人记录，不进 Git，两台机器各自独立。`personal/watchlist/` 统一记录待看的电影、电视剧和纪录片；`personal/reading/` 记录待读书目；`personal/game/` 记录待玩游戏。清单按一项一份 Markdown 文件记录，使用英文短横线文件名；同一系列的多季合并在一条记录中。完成后更新原条目状态，不自动删除。
+
+`personal/health/`（仅 Win10）是本机私密的健康管理项目，按报告日期保存 Markdown 摘要；身份标识默认省略，项目规则与记录入口见 `personal/health/README.md`。不进 Git，也不自动跨机同步。
+
+`personal/rice-review/`（仅 Win10）记录大米品种、包装重量、标价或成交价、换算后的每斤价格、评分和评价；图片上的货架标价与实际成交价分开保存。项目代码和数据不进 Git、不自动跨机同步；历史记录保留，删除前须明确授权。命令与字段见 `personal/rice-review/README.md`。
+
+`personal/skills/` 保存项目通过微信 Bot 使用的本机 Skill 源码，不进 Git、不自动跨机同步。运行时所需的 `.agents/skills/` 与 `.claude/skills/` 入口按 Skill 接入并链接回源码；各 Skill 的机器归属见本节和 `docs/project-index.md`。
+
+`personal/skills/purchase-review/`（仅 Win10）统一处理已购物品的实付价格、数量和使用评价查询；使用家庭库存与物品评价数据，米类记录继续沿用 `personal/rice-review/`。Skill 源码不进 Git、不自动跨机同步；运行入口通过 `.agents/skills/purchase-review/` 和 `.claude/skills/purchase-review/` 链接回源码。需要下线时保留个人购买与评价数据，只移除 Skill 入口和源码须另行确认。
 
 `personal/daily-reminders.json`（仅 macOS）：每日打卡提醒的数据源，使用 `version` 和 `items` 字段；每项包含稳定 `id`、提醒文本 `title` 与布尔值 `enabled`。定时脚本每次运行时重新读取此文件，增删改提醒只需编辑 JSON，不用修改脚本或重载调度。该文件位于被 Git 忽略的 `personal/`，两台机器各自保存。
 
 ### 本地临时源码与运行数据（均不进 Git）
 
+`runtime-data/skills-home/workspace/data/drawdown-alert-state.json`（仅 Win10）：股价监控去重状态；`levels` 保存回撤档位，`qqqiFocusSwitch` 保存 QQQI／分众换仓观察的前复权基准日期与已触发标记。每批实际交易后，按最新持仓和价格重设下一批基准；该文件只记录提醒状态，不代表已交易。
+
+`runtime-data/skills-home/workspace/data/qqqi-tax.json`（仅 Win10）：按证券代码保存券商分红账本，记录分红、预扣税、费用、月份和汇率。QQQI 年度表纳入券商流水或火球确认的分红记录；已知现金到账、再投资或部分再投资方式时标注，再投资仍计入分红但不视为可用现金。火球明确要求计入的估值以独立估算行标明假设与券商未确认，合计注明包含估算，不冒充券商实收。其他未核实分配保持待核对。文件位于本机忽略目录，不进 Git、不自动同步。
+
+`runtime-data/skills-home/workspace/data/home-inventory.json` 与 `scripts/inventory.js`（仅 Win10）：本机家庭物品库存。可补货的消耗品和替换耗材使用现有 `tags` 字段标记「囤货」，通过 `stockpile` 命令集中查看数量与位置；原有品类保留，耐用物品不纳入。数据与脚本位于本机忽略目录，不进 Git。
+
 `personal/skills/manage-codex-usage/`（仅 macOS）：项目本地 Codex 剩余额度查询 Skill 与标准库 Python 脚本，使用 Bot 项目内 Codex CLI 的 `account/rateLimits/read` 接口，不直接读取凭据、不创建模型会话、不主动发起登录或注销。`.agents/skills/manage-codex-usage` 与 `.claude/skills/manage-codex-usage` 仅以软链接接入同一源目录，均不进 Git；删除须明确授权。可在微信说「查询 Codex 剩余额度」或「Codex 额度还剩多少」。返回当前本机 Codex 登录账号的各额度窗口剩余比例与北京时间重置时间，不按聊天历史估算用量，也不表示 API 现金余额。当前 Bot 使用 `gpt-6-luna max`，账号共享窗口不冒充该模型独享额度。失败返回脱敏提示，单次查询预算为 60 秒，不自动重试或增加定时推送。
 
-`runtime-data/codex-acp/`（双机通用目录，依赖按机器分别安装）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；macOS 与 Win10 均固定调用 `@agentclientprotocol/codex-acp@2.2.2`，Win10 同目录固定安装 `wechat-acp@0.10.0`，不使用该版本内置且已弃用的 `@zed-industries/codex-acp` preset。启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="max"`，不修改全局 Codex 默认配置。沿用各机本地 Codex 登录，不跨机器复制或输出凭据。启动与恢复入口见 [Codex 部署说明](docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
+`personal/skills/task-calendar-routing/`（仅 Win10）：滴答清单与 Google Calendar 的任务／日程分流 Skill 源码；一般有日期 Dida365 待办手动单向镜像到 Google Calendar；银行卡／平台红包、返现、抽奖、优惠券等羊毛类提醒直接微信推送，不创建日历事件或镜像；`.agents/skills/task-calendar-routing` 和 `.claude/skills/task-calendar-routing` 作为本机 Agent 入口链接到同一源码，不进 Git，也不自动同步到 macOS。分流口径见对应 Skill 和项目索引。
+
+`personal/skills/fire-gap-switch-analysis/`（仅 Win10）：按 FIRE 年度现金流缺口计算持仓换仓后的分配收入变化；年缺口以最近资产日报严格口径为准，以最新快照为持仓数量来源，扣除卖出资产失去的现金流，不使用 ¥1,000,000 本金目标代替年缺口。`.agents/skills/fire-gap-switch-analysis` 和 `.claude/skills/fire-gap-switch-analysis` 是指向同一源码的 Junction，不进 Git，也不自动同步到 macOS；关键词包括「FIRE 缺口」「卖分众／茅台换 QQQI」「换仓后还差多少」。
+
+`runtime-data/codex-acp/`（双机通用目录，依赖按机器分别安装）：微信 Bot 专用的固定版本 Codex ACP 适配器与项目内依赖；macOS 与 Win10 均固定调用 `@agentclientprotocol/codex-acp@2.2.2`，Win10 同目录固定安装 `wechat-acp@0.10.0` 与 `@openai/codex@0.163.0`，不使用该版本内置且已弃用的 `@zed-industries/codex-acp` preset。Win10 启动入口通过 `CODEX_PATH` 明确调用项目内 Codex CLI，避免回落到适配器嵌套的旧版本或全局 CLI；启动参数指定 `gpt-6-luna` 与 `model_reasoning_effort="max"`，不修改全局 Codex 默认配置。沿用各机本地 Codex 登录，不跨机器复制或输出凭据。启动与恢复入口见 [Codex 部署说明](docs/deployments/codex.md) 。依赖目录按本节运行数据约定保留，删除须明确授权。
 
 `runtime-data/claude-acp/`（仅 macOS）：新 Mac 部署使用的固定版本 Claude ACP 适配器及项目内依赖，不依赖运行时下载。与 vendor 构建一起保留，删除前需明确授权；不保存登录凭据。
 
@@ -87,11 +111,13 @@ wechat-agent-bot/
 
 `runtime-data/send-audit/`：微信消息发送尝试的脱敏 JSONL 审计，仅本机保留，`.gitignore` 忽略，不在 Git 跟踪。2026-10-02 新 Mac 实现记录时间、耗时、`client_id`、`ret`、成功／失败与具名错误类型；不包含消息正文、token、用户 ID、`context_token`、headers 或请求/响应体。该实现不包含旧 Mac 审计的尝试序号和 HTTP 状态字段，不代表历史完整补丁已恢复。首次实现不追加日志轮转，先观察真实增长量，再决定是否需要清理机制。删除审计文件或目录必须经火球单独批准。
 
-`scripts/wechat-acp/`（双机通用目录，脚本按系统区分）：macOS 的 Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh`；Win10 的 Codex 使用 `start-codex-daemon.ps1` 与 `codex-config.win10.json`。各入口只调用本机固定版本依赖，找不到依赖时直接失败；Codex 固定使用 `gpt-6-luna`、`max` 和 `workspace-write`，不修改全局 Codex 配置。macOS 脚本继续校验构建、配置指纹与单实例；Win10 脚本拒绝配置漂移，并由 `wechat-acp` 的 PID 门禁防止重复 daemon。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
+`scripts/wechat-acp/`（双机通用目录，脚本按系统区分）：macOS 的 Claude 与 Codex 分别使用 `start-claude-daemon.sh`、`start-codex-daemon.sh`；Win10 的 Codex 使用 `start-codex-daemon.ps1` 与 `codex-config.win10.json`。各入口只调用本机固定版本依赖，找不到依赖时直接失败；Codex 固定使用 `gpt-6-luna`、`max` 和 `workspace-write`，不修改全局 Codex 配置。macOS 脚本继续校验构建、配置指纹与单实例；Win10 脚本校验 `wechat-acp@0.10.0`、`codex-acp@2.2.2`、`@openai/codex@0.163.0` 与专用配置，并通过 `CODEX_PATH` 指向项目内 CLI，由 `wechat-acp` 的 PID 门禁防止重复 daemon。`verify-send-failure.sh` 只调用测试夹具；`verify-codex.py` 创建隔离 ACP 会话并验证真实模型响应，不发送微信。整目录由 `scripts/` 整目录忽略，不进 Git。
 
 新 Mac 启动脚本通过 `build-manifest.json` 校验上游提交、源码及构建指纹，并拒绝已有 Node 微信 Bot 实例。Claude preset 固定调用项目内 `0.85.1` 适配器，不在启动时下载依赖。登录数据位于本机 `/Users/mac/.wechat-acp/`，不进入仓库；启动入口不注册开机自启，也不恢复旧 Mac 定时任务。
 
-`scripts/cron-tasks/`（仅 macOS）：保存任务清单、执行脚本与 `launchd/` 中的 plist 源文件，运行副本位于 `/Users/mac/Library/LaunchAgents/`。`runtime-data/cron/` 保存本机任务日志与互斥锁，不进 Git；成功仅表示脚本完成，微信到达需单独核验。脚本或 Skill 数据源缺失时任务失败退出，不生成占位内容。日志不得记录消息正文、凭据或原始接口响应。来源未恢复的任务不加载；当前恢复状态见项目 ROADMAP 与本地任务清单。停止任务使用对应 label 的 `launchctl bootout`，保留项目源文件和日志；删除须明确授权。
+`scripts/cron-tasks/windows/`（仅 Win10）：保存 Windows Task Scheduler 的任务包装脚本、提示词和注册入口；脚本存在不代表任务已注册或微信已送达。`calendar-event-reminder` 源文件按每天北京时间 09:30 检查次日 Google Calendar 日程并经 wechat-acp 投递微信，注册状态见 `ROADMAP.md`。新任务的状态日志只记录时间和退出码，不记录提醒正文。
+
+`scripts/cron-tasks/launchd/`（仅 macOS）：保存本机定时任务的 plist 源文件，运行副本位于 `/Users/mac/Library/LaunchAgents/`。`runtime-data/cron/` 保存本机任务日志与互斥锁，不进 Git；成功仅表示脚本完成，微信到达需单独核验。脚本或 Skill 数据源缺失时任务失败退出，不生成占位内容。日志不得记录消息正文、凭据或原始接口响应。来源未恢复的任务不加载；当前恢复状态见项目 ROADMAP 与本地任务清单。停止任务使用对应 label 的 `launchctl bootout`，保留项目源文件和日志；删除须明确授权。
 
 `.claude/skills/glm-stats/`（仅 macOS）：项目级智谱 GLM Coding Plan 额度查询 Skill，脚本按官方用量插件的请求构造，只查询额度端点一次并输出中文卡片。`runtime-data/cron/glm-credentials.json` 保存用户在本机手动录入的专用配置，权限为 `600`，不进 Git；配置不得进入 plist 或日志。`scripts/cron-tasks/setup-glm-credentials.command` 提供隐藏输入的本机录入入口，不改变 Claude Code 的认证配置。查询、定时包装及手动查询共用此 Skill，不读取其他项目的凭据。
 

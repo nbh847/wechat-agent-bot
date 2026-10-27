@@ -73,10 +73,10 @@ python3 /Users/mac/workspace/wechat-agent-bot/scripts/wechat-acp/verify-codex.py
 项目内安装命令：
 
 ```powershell
-& "$env:ProgramFiles\nodejs\npm.cmd" install --prefix "runtime-data\codex-acp" --save-exact wechat-acp@0.10.0 @agentclientprotocol/codex-acp@2.2.2
+& "$env:ProgramFiles\nodejs\npm.cmd" install --prefix "runtime-data\codex-acp" --save-exact wechat-acp@0.10.0 @agentclientprotocol/codex-acp@2.2.2 @openai/codex@0.163.0
 ```
 
-不要使用 `wechat-acp@0.10.0 --agent codex`：该内置 preset 实际调用已弃用的 `@zed-industries/codex-acp`。Win10 启动脚本改用 raw command，直接运行固定安装的维护版适配器；适配器自带兼容的 Codex CLI，不依赖全局 CLI 版本。
+不要使用 `wechat-acp@0.10.0 --agent codex`：该内置 preset 实际调用已弃用的 `@zed-industries/codex-acp`。Win10 启动脚本改用 raw command，直接运行固定安装的维护版适配器，并通过 `CODEX_PATH` 指向同目录顶层的 `@openai/codex@0.163.0`；不使用适配器嵌套的旧 CLI，也不依赖全局 CLI 版本。
 
 前台首次验收：
 
@@ -90,7 +90,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\wechat-acp\st
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\wechat-acp\start-codex-daemon.ps1"
 ```
 
-脚本固定注入 `CODEX_CONFIG={"model":"gpt-6-luna","model_reasoning_effort":"max"}` 与 `INITIAL_AGENT_MODE=workspace-write`，保留 `--hide-thoughts`，不修改全局 Codex 设置，不创建计划任务或开机自启。日常状态与停止命令使用项目内固定 CLI：
+脚本固定注入 `CODEX_CONFIG={"model":"gpt-6-luna","model_reasoning_effort":"max"}`、指向项目内 `@openai/codex@0.163.0` 的 `CODEX_PATH` 与 `INITIAL_AGENT_MODE=workspace-write`，保留 `--hide-thoughts`，不修改全局 Codex 设置，不创建计划任务或开机自启。日常状态与停止命令使用项目内固定 CLI：
 
 ```powershell
 node ".\runtime-data\codex-acp\node_modules\wechat-acp\dist\bin\wechat-acp.js" status
@@ -105,6 +105,12 @@ Win10 子进程清理风险见官方 [Issue #71](https://github.com/formulahendr
 - 使用适配器自带 Codex CLI，以 `gpt-6-luna`、`model_reasoning_effort=max`、只读沙箱和临时会话发起真实模型请求，响应成功；该验证不发送微信，也不修改全局 Codex 配置。
 - 后台 daemon 已由固定入口启动，进程命令行确认本项目工作目录、维护版 Codex ACP raw command 与 `--hide-thoughts`，微信登录复用并开始轮询；无新增启动错误。
 - 本轮未主动发送微信测试消息。微信实收、实际 ACP Bot 会话中的工作目录／规则读取和安全边界仍待火球从微信发消息验收；未配置开机自启。
+
+### 2026-10-20 Excel 连接器兼容性修复（仅 Win10）
+
+- Bot 原固定 Codex CLI `0.160.1` 调用 `cua_repl` 的最小 `cua.getState()` 时，受信任 Node 进程退出并重置内核；同机全局 Codex CLI `0.163.0` 执行相同调用成功。
+- 项目内新增固定 `@openai/codex@0.163.0`，启动脚本校验其精确版本并通过 `CODEX_PATH` 显式交给 `codex-acp@2.2.2`；隔离只读会话以 `gpt-6-luna`／`max` 调用 `cua.getState()` 返回 `CUA_INIT_OK`。Bot 重启为 PID `1856`，登录复用、消息轮询恢复且无启动 Fatal；未发送微信测试消息。
+- 同日 22:38，确认项目 `.agents` 根目录所有者异常为 `CodexSandboxOffline`，导致 Windows `workspace-write` 沙箱写入 deny ACE 时因缺少 `WRITE_DAC` 而无法启动本地命令执行器。按火球授权，仅将该根目录所有者非递归改回 `DESKTOP-OKVTB4N\ronnie`，未修改目录内容；Bot 重启为 PID `20280` 后，隔离 `workspace-write` 会话执行 `Write-Output LOCAL_EXEC_OK` 成功。
 
 ### Google Calendar 插件（仅 Win10）
 

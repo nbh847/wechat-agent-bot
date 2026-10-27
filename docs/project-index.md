@@ -35,6 +35,8 @@
 | 本机任务脚本 | `scripts/cron-tasks/windows/` | Win10 计划任务入口及提示词；`scripts/` 被 Git 忽略，脚本存在不等于任务已注册或运行。 |
 | 本机运行数据 | `runtime-data/` | Codex ACP 依赖、旧 QClaw 归档和本机 Skills 运行数据；目录被 Git 忽略，不在本索引展开私人记录。 |
 | 个人清单 | `personal/` | 每台机器独立保存的待看、待读、待玩、旅行与想法；不进 Git、不自动跨机同步。 |
+| 健康管理 | `personal/health/README.md` | 仅 Win10：本机私密体检与健康资料整理入口；不在索引复制个人健康记录。 |
+| 大米评测 | `personal/rice-review/README.md` | 仅 Win10：记录大米包装重量、货架标价／成交价、每斤价格、评分和评价；本机数据不进 Git、不自动跨机同步。 |
 
 ## 项目规则层的功能
 
@@ -42,19 +44,21 @@
 |---|---|---|
 | Memex 知识入库 | 入库、Memex、手动入库、自动入库、批量入库 | [`AGENTS.md`](../AGENTS.md) 规定 manual／auto／batch 的模式判定和授权边界。规则中引用 `docs/operations/ingestion-sop.md`；该文件未出现在本次 Win10 `docs/` 扫描结果中，执行时须先确认 SOP 可用。 |
 | 个人意向清单 | 待看／想看／影单、待读／想读／书单、待玩／想玩、旅行／目的地、项目／产品／研究想法 | [`AGENTS.md`](../AGENTS.md) 与 [`README.md`](../README.md)；对应目录为 `personal/watchlist/`、`personal/reading/`、`personal/game/`、`personal/destination/`、`personal/project/`、`personal/product/`、`personal/research/`。 |
-| 普通待办分流 | 购买、预约、联系等一次性行动 | 沿用工作区级待办队列；不可用时如实说明，不转存到内容清单。规则见 [`AGENTS.md`](../AGENTS.md)。 |
+| QQQI 年度分红列表 | 今年 QQQI 分红、今年分红列表、QQQI 年度分红 | 仅 Win10：从本机账本列出券商流水或火球确认的分红记录；扣税后金额以人民币显示、费用单列，并注明已知的现金到账、再投资或部分再投资方式。再投资仍计入分红，不视为可用现金。经授权的估算须单列并注明假设，不冒充券商流水。规则见 [`AGENTS.md`](../AGENTS.md)，账本为 `runtime-data/skills-home/workspace/data/qqqi-tax.json`。 |
+| 待办与日程分流 | 记一下、帮我安排、有日期的待办、复制到 Google 日历 | 仅 Win10：普通行动待办写入 Dida365；一般有日期待办手动单向镜像到 Google Calendar，按全天或明确时间段复制，火球通过本对话告知改期时更新副本；银行卡／平台红包、返现、抽奖、优惠券等羊毛类提醒直接微信推送，不创建日历事件或镜像；滴答应用内直接编辑不会自动同步。当前 Dida365 日历账号列表为空，未发现自动同步。其他机器沿用工作区级待办队列，细则见 [`task-calendar-routing`](../.claude/skills/task-calendar-routing/SKILL.md) 与 [`AGENTS.md`](../AGENTS.md)。 |
+| Google 日历前一日提醒 | 提前一天提醒、日历事件提醒、日程微信通知 | 仅 Win10：`calendar-event-reminder` 每天 09:30（北京时间）汇总次日开始的有效 Google Calendar 事件并经 wechat-acp 投递微信；Windows Task Scheduler 已注册且状态 Ready，首次定时运行和微信实收待验证。 |
 | 每日打卡提醒 | 每日提醒、提醒清单 | `personal/daily-reminders.json`（仅 macOS）；数据项可启用／停用，细节见 [`README.md`](../README.md)。 |
 
 ## 外部 MCP 能力
 
 | 服务 | 功能与关键词 | 机器归属、状态与入口 |
 |---|---|---|
-| Dida365（滴答清单／TickTick） | 查询和管理任务、清单、习惯等；Dida365、滴答清单、TickTick、查任务、创建任务、完成任务。 | 仅 Win10：Codex MCP OAuth 与工具发现已验证；Bot 配置使用同一服务地址。现存 ACP 会话即时加载状态未单独验证；macOS 未验证。配置与授权边界见 [`Codex 部署说明`](deployments/codex.md)，执行状态见 [`ROADMAP.md`](../ROADMAP.md)。 |
+| Dida365（滴答清单／TickTick） | 查询和管理任务、清单、习惯等；Dida365、滴答清单、TickTick、查任务、创建任务、完成任务。 | 仅 Win10：Codex MCP OAuth 与工具发现已验证；Bot 配置使用同一服务地址。2026-10-18 查询日历账号列表为空，未发现自动同步；一般有日期待办按 Skill 手动镜像到 Google Calendar；羊毛类提醒不建日历副本。现存 ACP 会话即时加载状态未单独验证；macOS 未验证。配置与授权边界见 [`Codex 部署说明`](deployments/codex.md)，执行状态见 [`ROADMAP.md`](../ROADMAP.md)。 |
 | Google Calendar | 查询日历、空闲时间和日程，创建或调整事件；Google 日历、查日程、空闲时间、创建日程。 | 仅 Win10：官方插件已安装并完成 Google OAuth；全局 Codex CLI 与 Bot 固定 Codex CLI 的临时只读会话均已调用 `google_calendar.list_calendars`。Bot daemon 已通过固定入口重启并恢复微信轮询；微信端自然语言调用与实收未单独验收，macOS 未验证。接入与验证边界见 [`Codex 部署说明`](deployments/codex.md)，执行状态见 [`ROADMAP.md`](../ROADMAP.md)。 |
 
 ## 项目 Skill 功能目录
 
-以下 33 个 `SKILL.md` 在本次 Win10 工作区的 `.claude/skills/` 扫描中可见。`SKILL.md` 是执行细节和关键词口径的权威入口；这里仅概括用途与常见说法。此目录被 `.gitignore` 忽略，不能据此推断 Mac 上也已安装。
+以下 36 个 `SKILL.md` 在本次 Win10 工作区的 `.claude/skills/` 扫描中可见。`SKILL.md` 是执行细节和关键词口径的权威入口；这里仅概括用途与常见说法。此目录被 `.gitignore` 忽略，不能据此推断 Mac 上也已安装。
 
 ### 资产、财务与模型额度
 
@@ -68,15 +72,16 @@
 | [`crash-rebalance`](../.claude/skills/crash-rebalance/SKILL.md) | 纳指大跌时的再平衡预案与压力测试。 | 纳指跌了怎么办、大跌再平衡、暴跌方案、压力测试。 |
 | [`ct433-drift-check`](../.claude/skills/ct433-drift-check/SKILL.md) | CLEC433 配置偏离、基准和动作历史查询，并给出逐步调整提案。 | 433 偏离、资产平衡检查、漂移检查、433 基准、动作历史、挪一步。 |
 | [`deepseek-balance-first-reply`](../.claude/skills/deepseek-balance-first-reply/SKILL.md) | 每日首次回复附带 DeepSeek 余额。 | DeepSeek 余额、当天首次回复。 |
+| [`fire-gap-switch-analysis`](../.claude/skills/fire-gap-switch-analysis/SKILL.md) | 按年度 FIRE 现金流缺口核算卖出资产损失的分红、QQQI 增量分配与换仓后缺口；缺口以最近资产日报严格口径为准，不使用本金目标替代年缺口。 | FIRE 缺口、年度分红差多少、卖分众／茅台换 QQQI、换仓后还差多少。 |
 | [`fire-withdrawal-model`](../.claude/skills/fire-withdrawal-model/SKILL.md) | FIRE 取钱与三池现金流模型。 | FIRE 取钱、提款、债券池、分红池、增长池。 |
 | [`fund-daily`](../.claude/skills/fund-daily/SKILL.md) | 场外基金数据更新与基金日报。 | 基金、基金日报、场外基金。 |
 | [`guosen-rebalance`](../.claude/skills/guosen-rebalance/SKILL.md) | 国信证券组合状态和年度动作日计算。 | 国信组合、涨跌、比例、现金腿、国信动作日。 |
 | [`insurance-payments`](../.claude/skills/insurance-payments/SKILL.md) | 保险缴费记录与查询。 | 保险缴费、保费记录。 |
-| [`portfolio-report`](../.claude/skills/portfolio-report/SKILL.md) | 全资产组合报告及多时段日报。 | 资产日报、总资产、总持仓、收盘总资产。 |
+| [`portfolio-report`](../.claude/skills/portfolio-report/SKILL.md) | 全资产组合报告及多时段日报，含严格 FIRE 缺口、扣除房贷后的月可用生活费；仅 Win10 日报比较配置结构①A股+红利与③CLEC433，①超③时按差额提示减持，①≤③静默。 | 资产日报、总资产、总持仓、收盘总资产、生活费备用、①大于③再平衡。 |
 | [`qianji-expense-analysis`](../.claude/skills/qianji-expense-analysis/SKILL.md) | 钱迹 CSV 消费分析。 | 钱迹、账单、本月消费、花了多少钱。 |
 | [`rebalance-before-33x`](../.claude/skills/rebalance-before-33x/SKILL.md) | 达到 33 倍目标前的年度聪明再平衡方案。 | 33 倍前、涨年／跌年怎么操作、33 倍前再平衡。 |
 | [`rebalance-check`](../.claude/skills/rebalance-check/SKILL.md) | 半年配置偏离检查与年度聪明再平衡。 | 要再平衡吗、四大类偏离、半年检查、聪明再平衡。 |
-| [`stock-alert-system`](../.claude/skills/stock-alert-system/SKILL.md) | 股价、均线和组合比例监控。 | 股价提示、均线、腾讯、QQQ、到价提醒。 |
+| [`stock-alert-system`](../.claude/skills/stock-alert-system/SKILL.md) | 股价、均线、回撤监控，以及分众传媒与 QQQI 的分批换仓观察提醒。 | 股价提示、均线、腾讯、QQQ、QQQI、分众、到价提醒、个股换仓。 |
 | [`trade-ingest`](../.claude/skills/trade-ingest/SKILL.md) | 从成交截图或文字录入交易。 | 录入、入账、记一笔、成交截图、买入、卖出。 |
 | [`wealth-tracker`](../.claude/skills/wealth-tracker/SKILL.md) | 财富自由进度追踪与图表。 | 财富自由、FIRE 进度、资产进度、画图。 |
 
@@ -98,8 +103,9 @@
 | [`auto-backup`](../.claude/skills/auto-backup/SKILL.md) | 自动云备份。 | 备份、云备份、打包。 |
 | [`birthday-reminder`](../.claude/skills/birthday-reminder/SKILL.md) | 生日及农历生日提醒。 | 生日、农历、生辰。 |
 | [`household-inventory-manager`](../.claude/skills/household-inventory-manager/SKILL.md) | 家庭物品管理。 | 家庭物品、家里有什么、物品管理。 |
-| [`inventory`](../.claude/skills/inventory/SKILL.md) | 物品与消耗品库存、状态、使用和价格记录。 | 有什么、还有多少、用完了、买了多少钱、用了多久。 |
+| [`inventory`](../.claude/skills/inventory/SKILL.md) | 物品与消耗品库存、囤货清单、状态、使用和价格记录。 | 有什么、还有多少、囤货、查囤货、盘点消耗品、用完了、买了多少钱、用了多久。 |
 | [`item-reviews`](../.claude/skills/item-reviews/SKILL.md) | 商品／物品评价和复购记录。 | 评价、评分、好用吗、回购、值得买吗。 |
+| [`purchase-review`](../.claude/skills/purchase-review/SKILL.md) | 汇总已购物品的实付价格、数量、评价和回购意愿；大米价格与评价沿用专属项目。 | 买了什么、买过哪些、实付多少、价格和评价、购物记录。 |
 | [`travel-bucket`](../.claude/skills/travel-bucket/SKILL.md) | 旅行愿望与目的地 bucket 清单。 | 旅游、想去、旅行计划、bucket。 |
 | [`wardrobe`](../.claude/skills/wardrobe/SKILL.md) | 衣物、鞋袜和穿搭管理。 | 衣柜、衣服、鞋子、袜子、穿搭。 |
 
@@ -109,7 +115,13 @@
 |---|---|---|
 | [`cron-task-create`](../.claude/skills/cron-task-create/SKILL.md) | 创建微信定时提醒或推送任务。 | 建个定时任务、每天几点提醒、每周推送、每月检查。 |
 
-### 文档中记录、但不计入上述 33 个项目 Skill 的功能
+### 日程与任务管理
+
+| Skill | 功能 | 关键词／自然语言入口 |
+|---|---|---|
+| [`task-calendar-routing`](../.claude/skills/task-calendar-routing/SKILL.md) | 普通待办写入 Dida365，固定时段安排写入 Google Calendar；一般有日期 Dida365 待办手动单向镜像；银行卡／平台红包、返现、抽奖、优惠券等羊毛类提醒直接微信推送，不创建日历事件或镜像。 | 帮我记一下、有日期的待办、复制到 Google 日历、滴答清单、Google Calendar。 |
+
+### 文档中记录、但不计入上述 36 个项目 Skill 的功能
 
 - 智谱 GLM Coding Plan 额度查询与卡片：[`glm-usage-template.md`](deployments/glm-usage-template.md)；查询 Skill 和定时任务按项目文档仅 macOS 已验证，Win10 状态见路线图。
 - Codex 剩余额度查询：`manage-codex-usage`（仅 macOS），规则与触发词见 [`AGENTS.md`](../AGENTS.md) 和 [`README.md`](../README.md)。
@@ -121,9 +133,11 @@
 
 | 任务族 | 当前可见入口 | 覆盖功能 |
 |---|---|---|
-| 资产与市场 | `asset-morning`、`asset-close`、`fund-daily`、`a-share-ytd-weekly`、`annual-rebalance-check`、`rebalance-check`、`bond-us-fill-check`、`ct433-drift-check`、`dividend-reminder`、`dividend-yield-check`、`astockdiv-mid-report`、`astockdiv-eom-report`、`guosen-annual-buy`、`nasdaq-drawdown`、`qqqi-dividend-alert`、`qqqi-monthly-review`、`qqqi-switch-pool`、`stock-alert`、`stale-daily`、`credit-card-repay` | 资产早报／收盘报、基金与 A 股 YTD、再平衡、补仓和偏离监控、分红、国信年度动作、纳指回撤、QQQI 提醒及信用卡还款提醒。 |
+| 资产与市场 | `asset-morning`、`asset-close`、`fund-daily`、`a-share-ytd-weekly`、`annual-rebalance-check`、`rebalance-check`、`bond-us-fill-check`、`ct433-drift-check`、`dividend-reminder`、`dividend-yield-check`、`astockdiv-mid-report`、`astockdiv-eom-report`、`guosen-annual-buy`、`nasdaq-drawdown`、`qqqi-dividend-alert`、`qqqi-monthly-review`、`qqqi-switch-pool`、`stock-alert`、`stale-daily`、`credit-card-repay` | 资产早报／收盘报、基金与 A 股 YTD、再平衡、补仓和偏离监控、分红、国信年度动作、纳指回撤、QQQI 官方分配公告提醒（按本机最新持仓估算人民币到账金额和分配率）、分众／QQQI 分批换仓信号及信用卡还款提醒；asset-morning 与 asset-close 每次报告比较配置结构①和③，①超③时在摘要提示差额、①≤③时静默。 |
 | 家庭与健康 | `dog-deworm-reminder`、`filter-reminder`、`filter-monthly-check`、`period-reminder`、`period-reminder-check`、`poop-timer`、`poop-weekly`、`poop-monthly`、`supplement-reminder`、`supplement-noon-20261016` | 宠物驱虫、滤芯维护、周期提醒、大号记录／周报／月报和补剂提醒。 |
 | 汇总与问答 | `finance-question-reminder`、`monthly-summary`、`monthly-brief` | 财务问题提醒、月度总结和月度简报。 |
+| 个人任务安排 | `weekly-task-arrangement` | 仅 Win10：每周一 09:00（北京时间）汇总本周滴答清单有日期的未完成任务与所有可见 Google Calendar 日程，跨来源副本去重后按「生活、工作、投资、健康、学习、清洁、其他」分类，各类内按日期排序并合并为一条微信消息。 |
+| Google 日历前一日提醒 | `calendar-event-reminder` | 仅 Win10：每日 09:30（北京时间）查询所有可见日历中次日开始的有效事件，有事件时合并为一条微信消息；Windows Task Scheduler 已注册且状态 Ready，首次定时运行和微信实收待验证。 |
 | 注册入口 | `register-*.ps1`、`register-*.cmd` | Windows 任务计划程序注册辅助入口；具体操作前读取对应脚本和安全规则。 |
 
 Win10 ACP 启动文件为 `scripts/wechat-acp/start-codex-daemon.ps1` 与 `scripts/wechat-acp/codex-config.win10.json`；部署步骤和验收状态见 [`codex.md`](deployments/codex.md)。
@@ -138,12 +152,13 @@ Win10 ACP 启动文件为 `scripts/wechat-acp/start-codex-daemon.ps1` 与 `scrip
 | Memex、入库、auto ingest | 项目规则中特指 Memex 知识库流程；自动、批量等词决定入库模式。 | [`AGENTS.md`](../AGENTS.md)；执行 SOP 需核对文档是否可用 |
 | Skill、技能 | 自然语言入口和专用操作流程；触发后先读对应 `SKILL.md`。 | `.claude/skills/<skill>/SKILL.md` |
 | 资产日报、全资产、总持仓、组合报告 | 同属资产快照／持仓报告入口；分别核对 `asset-management` 和 `portfolio-report` 的口径。 | 对应两个 Skill |
+| 不同券商对比、券商收费对比 | 仅 Win10：返回固定的券商地点、QQQI 分红扣款比例、最低交易费和融资年利率表；未确认项保留为「待确认」。 | [`broker-comparison.json`](../runtime-data/skills-home/workspace/data/broker-comparison.json) |
 | A 股 YTD | A 股年度涨跌统计。 | `a-share-ytd` |
 | CLEC433、433、漂移、挪一步 | 组合基准偏离、动作历史和逐步调整方案。 | `ct433-drift-check` |
 | 再平衡、半年检查、聪明再平衡 | 配置偏离检查或按年度策略给出调整方案。 | `rebalance-check`、`rebalance-before-33x`、`crash-rebalance` |
-| 33 倍、FIRE、财富自由 | 退休目标进度与提款方案；33 倍规则和一般 FIRE 取钱模型是不同入口。 | `rebalance-before-33x`、`wealth-tracker`、`fire-withdrawal-model` |
+| 33 倍、FIRE、财富自由 | 33 倍退休本金目标、资产进度、年度现金流缺口换仓分析与提款策略走不同入口；用户明确要求按年缺口时不改用本金目标。 | `rebalance-before-33x`、`wealth-tracker`、`fire-gap-switch-analysis`、`fire-withdrawal-model` |
 | 钱迹 | 个人消费流水 CSV 与预算分析入口。 | `qianji-expense-analysis` |
-| QQQI、QQQ、腾讯、均线 | 组合跟踪、价格提示和再平衡相关标的词；策略参数只以对应 Skill 为准。 | `stock-alert-system`、`rebalance-check`、`crash-rebalance` |
+| QQQI、QQQ、腾讯、分众、均线、换股 | 组合跟踪、价格提示、分众／QQQI 分批换仓观察和再平衡相关标的词；策略参数只以对应 Skill 为准。 | `stock-alert-system`、`rebalance-check`、`crash-rebalance` |
 | 有聊清单 | 书影音、课程等内容进度清单。 | `bored-list` |
 | 微信读书、WeRead | 微信读书书架、笔记和统计。 | `weread-skills` |
 | 定时任务、每天几点推送、每周提醒 | 创建自动化任务的自然语言入口；任务创建和已有计划任务管理是两回事。 | `cron-task-create`、Win10 任务脚本目录、部署手册 |
