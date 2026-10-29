@@ -1,6 +1,6 @@
 # WeChat Agent Bot Workspace
 
-本仓库是火球的**个人 AI 助手工作区**，用于替代 OpenClaw（小龙虾）作为本地 Agent 的统一入口和个人知识管理空间。
+本仓库是供本机用户使用的**个人 AI 助手工作区**，用于替代 OpenClaw（小龙虾）作为本地 Agent 的统一入口和个人知识管理空间。不同使用者的称呼和私人数据按本机分别保存。
 
 ## 项目定位
 
@@ -46,6 +46,7 @@ wechat-agent-bot/
 │   ├── skills/        # 项目本机 Skill 源码；按 Skill 标注机器归属
 │   │   ├── quota-usage/ # 全局额度 Skill 的历史本地副本，不作为当前入口
 │   │   └── zsxq-raw-brief/ # 知识星球原文简报 Skill，供定时任务调用
+│   ├── user-preferences.json # 本机用户偏好覆盖；被 Git 忽略
 │   ├── daily-reminders.json # 仅 macOS：每日提醒事项清单
 │   ├── destination/   # 旅行目的地
 │   ├── game/          # 待玩或想玩的游戏
@@ -82,6 +83,16 @@ wechat-agent-bot/
 `.tmp/<task-slug>/` 只存放当前任务产生的临时脚本和可重建产物；`.tmp/` 已加入 `.gitignore`。任务结束后仅清理本任务创建的子目录，不清空其他任务留下的内容。
 
 `personal/` 保存本机个人清单、想法和私人记录，不进 Git，两台机器各自独立。`personal/watchlist/` 统一记录待看的电影、电视剧和纪录片；`personal/reading/` 记录待读书目；`personal/game/` 记录待玩游戏。清单按一项一份 Markdown 文件记录，使用英文短横线文件名；同一系列的多季合并在一条记录中。完成后更新原条目状态，不自动删除。
+
+`personal/user-preferences.json`（双机通用格式，各机器各自保存）：可选的本机用户偏好覆盖，当前用于设置 `display_name`。另一台机器拉取代码后，在仓库根目录创建此文件（若 `personal/` 不存在，先创建目录），并填写本机用户指定的称呼，例如：
+
+```json
+{
+  "display_name": "本机用户称呼"
+}
+```
+
+项目 `AGENTS.md` 每次回复前读取该文件；字段有非空值时用作称呼，文件缺失、无效或未填写时回退到当前运行环境的全局 `AGENTS.md`。该文件被 `personal/` 忽略，不进 Git，也不自动跨机同步；不需要覆盖全局称呼时，无需创建此文件。
 
 `personal/health/`（仅 Win10）是本机私密的健康管理项目，按报告日期保存 Markdown 摘要；身份标识默认省略，项目规则与记录入口见 `personal/health/README.md`。不进 Git，也不自动跨机同步。
 
